@@ -1,0 +1,237 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <Import Project="$(MSBuildProjectDirectory)\Build.tasks" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A3CA2838-987D-483D-9A0C-431D5A847E22}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>com.bemaservices.MinistrySafe</RootNamespace>
+    <AssemblyName>com.bemaservices.MinistrySafe</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="DotLiquid">
+      <HintPath>$(SolutionDir)RockWeb\Bin\DotLiquid.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework">
+      <HintPath>$(SolutionDir)RockWeb\Bin\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer">
+      <HintPath>$(SolutionDir)RockWeb\Bin\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="Humanizer">
+      <HintPath>$(SolutionDir)RockWeb\Bin\Humanizer.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Data.Edm, Version=5.6.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(SolutionDir)RockWeb\Bin\Microsoft.Data.Edm.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Data.OData, Version=5.6.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(SolutionDir)RockWeb\Bin\Microsoft.Data.OData.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(SolutionDir)RockWeb\Bin\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Quartz, Version=2.0.0.100, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(SolutionDir)RockWeb\Bin\Quartz.dll</HintPath>
+    </Reference>
+    <Reference Include="RestSharp">
+      <HintPath>$(SolutionDir)RockWeb\Bin\RestSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Constants\MinistrySafeConstants.cs" />
+    <Compile Include="Constants\MinistrySafeSystemGuid.cs" />
+    <Compile Include="Jobs\ImportBackgroundChecks.cs" />
+    <Compile Include="Jobs\ImportTrainings.cs" />
+    <Compile Include="Migrations\010_AdditionalTrainingTypes.cs" />
+    <Compile Include="Migrations\008_TrainingWorkflowUpdates.cs" />
+    <Compile Include="Migrations\007_BackgroundChecks.cs" />
+    <Compile Include="Migrations\006_NamespaceMove.cs" />
+    <Compile Include="Migrations\005_FixWorkflowDeleteIssue.cs" />
+    <Compile Include="Migrations\004_WorkflowFix.cs" />
+    <Compile Include="Migrations\002_Workflow.cs" />
+    <Compile Include="Migrations\003_Pages.cs" />
+    <Compile Include="Migrations\001_Data.cs" />
+    <Compile Include="Migrations\009_UserTagsAndImportJobs.cs" />
+    <Compile Include="MinistrySafeApi\BackgroundCheckWebhook.cs" />
+    <Compile Include="MinistrySafeApi\TagResponse.cs" />
+    <Compile Include="MinistrySafeApi\PackageResponse.cs" />
+    <Compile Include="MinistrySafe.cs" />
+    <Compile Include="MinistrySafeApi\GetAllTrainingResponse.cs" />
+    <Compile Include="MinistrySafeApi\TrainingResponse.cs" />
+    <Compile Include="MinistrySafeApi\CreateUserRequest.cs" />
+    <Compile Include="MinistrySafeApi\BackgroundCheckResponse.cs" />
+    <Compile Include="MinistrySafeApi\UserResponse.cs" />
+    <Compile Include="MinistrySafeApi\GetTrainingResponse.cs" />
+    <Compile Include="MinistrySafeApi\TrainingWebhook.cs" />
+    <Compile Include="MinistrySafeApi\MinistrySafeApiUtility.cs" />
+    <Compile Include="Model\MinistrySafeUser.cs" />
+    <Compile Include="Model\MinistrySafeUserService.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Workflow\Actions\MinistrySafe\GetUserTags.cs" />
+    <Compile Include="Workflow\Actions\MinistrySafe\MinistrySafeRequest.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".gitignore" />
+    <None Include="Build.tasks" />
+    <None Include="builds\.version" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Utility\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SolutionDir)Rock.Common\Rock.Common.csproj">
+      <Project>{13568622-324e-4493-b605-c9896e725d30}</Project>
+      <Name>Rock.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="$(SolutionDir)Rock.Enums\Rock.Enums.csproj">
+      <Project>{61DECE2B-0434-435E-8D65-49A4FDF98365}</Project>
+      <Name>Rock.Enums</Name>
+    </ProjectReference>
+    <ProjectReference Include="$(SolutionDir)Rock.Lava.Shared\Rock.Lava.Shared.csproj">
+      <Project>{8820cd93-70ee-496d-b17b-0c4c68dd4957}</Project>
+      <Name>Rock.Lava.Shared</Name>
+    </ProjectReference>
+    <ProjectReference Include="$(SolutionDir)Rock.Rest\Rock.Rest.csproj">
+      <Project>{add1edd0-a4cb-4e82-b6ad-6ad1d556deae}</Project>
+      <Name>Rock.Rest</Name>
+    </ProjectReference>
+    <ProjectReference Include="$(SolutionDir)Rock\Rock.csproj">
+      <Project>{185a31d7-3037-4dae-8797-0459849a84bd}</Project>
+      <Name>Rock</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <!-- There may be a better way of building this reference, but I don't see it -->
+    <MSBuildCommunityTasksPath>$(SolutionDir)\packages\MSBuildTasks.1.5.0.235\tools</MSBuildCommunityTasksPath>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets" Condition="Exists('$(SolutionDir)packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets')" />
+  <PropertyGroup>
+    <BuildDir>builds</BuildDir>
+  </PropertyGroup>
+  <Target Name="BeforeBuild" DependsOnTargets="UpdateAssemblyVersion">
+  </Target>
+  <Target Name="AfterBuild" DependsOnTargets="BuildPackageZip">
+  </Target>
+  <!-- Clean old stuff -->
+  <Target Name="DeleteFiles">
+    <ItemGroup>
+      <OldFiles Include="$(BuildDir)\tmp\**" />
+    </ItemGroup>
+    <Delete Files="@(OldFiles)" />
+  </Target>
+  <!-- Prepare the files to be zipped -->
+  <Target Name="CopyFiles" DependsOnTargets="DeleteFiles">
+    <ItemGroup>
+      <CopyFiles Include="$(OutputPath)com.bemaservices.MinistrySafe.dll;" />
+      <BlockCode Include="$(ProjectDir)Plugins\com_bemaservices\MinistrySafe\**\*.*" />
+      <WebhookCode Include="$(ProjectDir)Webhooks\MinistrySafe.ashx" />
+      <VersionFile Include="builds\.version" />
+    </ItemGroup>
+    <MakeDir Directories="$(BuildDir)\tmp" Condition="!Exists('$(BuildDir)\tmp')" />
+    <MakeDir Directories="$(BuildDir)\tmp\content" Condition="!Exists('$(BuildDir)\tmp\content')" />
+    <MakeDir Directories="$(BuildDir)\tmp\content\bin" Condition="!Exists('$(BuildDir)\tmp\content\bin')" />
+    <MakeDir Directories="$(BuildDir)\tmp\content\Plugins" Condition="!Exists('$(BuildDir)\tmp\content\Plugins')" />
+    <MakeDir Directories="$(BuildDir)\tmp\install" Condition="!Exists('$(BuildDir)\tmp\install')" />
+    <MakeDir Directories="$(BuildDir)\tmp\uninstall" Condition="!Exists('$(BuildDir)\tmp\uninstall')" />
+    <Copy SourceFiles="@(CopyFiles)" DestinationFolder="$(BuildDir)\tmp\content\bin\" />
+    <Copy SourceFiles="@(BlockCode)" DestinationFiles="@(BlockCode->'$(BuildDir)\tmp\content\Plugins\com_bemaservices\MinistrySafe\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(WebhookCode)" DestinationFiles="@(WebhookCode->'$(BuildDir)\tmp\content\Webhooks\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <!-- Just put the .version file into the install and uninstall folder so that those folders are created in the zip -->
+    <Copy SourceFiles="@(VersionFile)" DestinationFolder="$(BuildDir)\tmp\install" />
+    <Copy SourceFiles="@(VersionFile)" DestinationFolder="$(BuildDir)\tmp\uninstall" />
+  </Target>
+  <!-- Create the package zip file -->
+  <Target Name="BuildPackageZip" DependsOnTargets="CopyFiles" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <ZipFiles Include="$(BuildDir)\tmp\**" />
+    </ItemGroup>
+    <Version VersionFile="builds\.version" BuildType="None" RevisionType="None">
+      <Output TaskParameter="Major" PropertyName="Major" />
+      <Output TaskParameter="Minor" PropertyName="Minor" />
+      <Output TaskParameter="Build" PropertyName="Build" />
+      <Output TaskParameter="Revision" PropertyName="Revision" />
+    </Version>
+    <PropertyGroup>
+      <PackageOut>$(BuildDir)\$(Major).$(Minor).$(Build)</PackageOut>
+    </PropertyGroup>
+    <MakeDir Directories="$(PackageOut)" Condition="!Exists('$(PackageOut)')" />
+    <Message Text="Version: $(Major).$(Minor).$(Build).$(Revision)" />
+    <Zip Files="@(ZipFiles)" WorkingDirectory="$(BuildDir)\tmp\" ZipFileName="$(PackageOut)\MinistrySafe-v$(Major).$(Minor).$(Build).$(Revision).plugin" ZipLevel="9" />
+  </Target>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets'))" />
+  </Target>
+  <Target Name="UpdateAssemblyVersion" Condition="'$(Configuration)' == 'Release'">
+    <!-- 
+    	When creating a new version of this project, update the Build number 
+    	(and Major and Minor if needed) in the .version file to be the correct version.
+    	The revision number will always be automatic.
+    -->
+    <!-- 
+      We'll increment the version number only during the "BeforeBuild" and then use this
+      new version number during the "AfterBuild" step for the zip and plugin packaging. 
+    -->
+    <Version VersionFile="builds\.version" BuildType="None" RevisionType="Increment">
+      <Output TaskParameter="Major" PropertyName="Major" />
+      <Output TaskParameter="Minor" PropertyName="Minor" />
+      <Output TaskParameter="Build" PropertyName="Build" />
+      <Output TaskParameter="Revision" PropertyName="Revision" />
+    </Version>
+    <ItemGroup>
+      <!--<AssemblyFile Include="Properties\AssemblyInfo.cs" />-->
+      <RegexTransform Include="Properties\AssemblyInfo.cs">
+        <Find>(?&lt;major&gt;\d+)\.(?&lt;minor&gt;\d+)\.\d+\.(?&lt;revision&gt;\d+)</Find>
+        <ReplaceWith>$(Major).$(Minor).$(Build).$(Revision)</ReplaceWith>
+      </RegexTransform>
+    </ItemGroup>
+    <RegexTransform Items="@(RegexTransform)" />
+  </Target>
+  <PropertyGroup>
+    <PostBuildEvent>xcopy /Y /R /E /I "$(ProjectDir)Plugins" "$(SolutionDir)RockWeb\Plugins"
+xcopy /Y /R "$(ProjectDir)bin\Debug\com.bemaservices.PastoralCare.dll" "$(SolutionDir)RockWeb\bin"
+xcopy /Y /R "$(ProjectDir)Webhooks\MinistrySafe.ashx" "$(SolutionDir)RockWeb\Webhooks"</PostBuildEvent>
+  </PropertyGroup>
+</Project>
