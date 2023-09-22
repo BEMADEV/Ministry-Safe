@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity.ModelConfiguration;
 using System.Runtime.Serialization;
 using Rock.Data;
+using Rock.Lava;
 using Rock.Model;
 namespace com.bemaservices.MinistrySafe.Model
 {
@@ -77,7 +78,7 @@ namespace com.bemaservices.MinistrySafe.Model
         /// <value>
         /// The person alias.
         /// </value>
-        [LavaInclude]
+        [LavaVisibleAttribute]
         public virtual Rock.Model.PersonAlias PersonAlias { get; set; }
 
         /// <summary>
@@ -86,7 +87,7 @@ namespace com.bemaservices.MinistrySafe.Model
         /// <value>
         /// The workflow.
         /// </value>
-        [LavaInclude]
+        [LavaVisibleAttribute]
         public virtual Rock.Model.Workflow Workflow { get; set; }
 
         #endregion

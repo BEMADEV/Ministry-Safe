@@ -674,8 +674,8 @@ namespace com.bemaservices.MinistrySafe.Migrations
 
         private void UpdateMinistrySafePage()
         {
-            RockMigrationHelper.AddEntityAttribute( "com.bemaservices.MinistrySafe.MinistrySafe", Rock.SystemGuid.FieldType.ENCRYPTED_TEXT, "", "", "Access Token", "", "MinistrySafe Access Token", 0, "", "d582affe-7331-43c6-a006-95c291db4bad" );
-            RockMigrationHelper.AddEntityAttribute( "com.bemaservices.MinistrySafe.MinistrySafe", Rock.SystemGuid.FieldType.BOOLEAN, "", "", "Is Staging Environment", "", "Checkr Access Token", 1, "", "80c0f4de-39e8-45e4-9cfc-8f59e401242c" );
+            RockMigrationHelper.AddOrUpdateEntityAttribute( "com.bemaservices.MinistrySafe.MinistrySafe", Rock.SystemGuid.FieldType.ENCRYPTED_TEXT, "", "", "Access Token", "", "MinistrySafe Access Token", 0, "", "d582affe-7331-43c6-a006-95c291db4bad","AccessToken" );
+            RockMigrationHelper.AddOrUpdateEntityAttribute( "com.bemaservices.MinistrySafe.MinistrySafe", Rock.SystemGuid.FieldType.BOOLEAN, "", "", "Is Staging Environment", "", "Checkr Access Token", 1, "", "80c0f4de-39e8-45e4-9cfc-8f59e401242c","IsStagingEnvironment" );
 
 
             RockMigrationHelper.DeletePage( "5C7EA1BE-FC79-4821-8FA3-759F8C65C87B" );

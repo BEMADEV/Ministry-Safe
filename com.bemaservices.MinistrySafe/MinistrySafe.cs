@@ -1320,7 +1320,7 @@ namespace com.bemaservices.MinistrySafe
                 var personQuery = new PersonService.PersonMatchQuery( userResponse.FirstName, userResponse.LastName, userResponse.Email, null );
                 var person = personService.FindPerson( personQuery, false );
 
-                if ( person.IsNull() )
+                if ( person == null )
                 {
                     // Add New Person
                     person = new Person();
@@ -1350,7 +1350,7 @@ namespace com.bemaservices.MinistrySafe
                     }
                 }
 
-                if ( person.IsNotNull() )
+                if ( person != null )
                 {
                     externalId = string.Format( "pa{0}", person.PrimaryAliasId );
                 }
