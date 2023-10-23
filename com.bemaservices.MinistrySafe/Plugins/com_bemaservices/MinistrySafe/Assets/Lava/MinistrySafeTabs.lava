@@ -1,4 +1,4 @@
-{% assign currentPageId = 'Global' | 'Global' | Page:'Id' %}
+{% assign currentPageId = 'Global' | Page:'Id' %}
   <ul class="nav nav-tabs">
     {% page where:'Guid == "5C7EA1BE-FC79-4821-8FA3-759F8C65C87B"' %}
       <li {% if page.Id == currentPageId %}class='active'{% endif %}>
