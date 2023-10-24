@@ -303,7 +303,7 @@ namespace com.bemaservices.MinistrySafe
                         {
                         }
 
-                        if ( reportStatus.IsNullOrWhiteSpace() && recommendation == "Invitation Expired" )
+                        if ( reportStatus.IsNullOrWhiteSpace() && ( recommendation == "Invitation Expired" || recommendation == "Cancelled" ) )
                         {
                             workflow.CompletedDateTime = RockDateTime.Now;
                             workflow.MarkComplete( recommendation );
@@ -413,14 +413,15 @@ namespace com.bemaservices.MinistrySafe
             var userId = backgroundCheckWebhook.UserId;
             var level = backgroundCheckWebhook.Level;
             var customPackageCode = backgroundCheckWebhook.CustomBackgroundCheckPackageCode;
+            var status = backgroundCheckWebhook.Status;
             var completionDate = backgroundCheckWebhook.CompleteDate.AsDateTime();
             var orderDate = backgroundCheckWebhook.OrderDate.AsDateTime();
 
 
-            return UpdateBackgroundCheck( requestId, externalId, resultsUrl, userId, level, customPackageCode, completionDate, orderDate );
+            return UpdateBackgroundCheck( requestId, externalId, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate );
         }
 
-        private static bool UpdateBackgroundCheck( string requestId, string externalId, string resultsUrl, int? userId, int? level, string customPackageCode, DateTime? completionDate, DateTime? orderDate, WorkflowTypeCache workflowTypeCache = null )
+        private static bool UpdateBackgroundCheck( string requestId, string externalId, string resultsUrl, int? userId, int? level, string customPackageCode, string status, DateTime? completionDate, DateTime? orderDate, WorkflowTypeCache workflowTypeCache = null )
         {
             try
             {
@@ -458,7 +459,7 @@ namespace com.bemaservices.MinistrySafe
                         rockContext.SaveChanges();
                     }
 
-                    backgroundCheck.Status = "consider";
+                    backgroundCheck.Status = status;
 
                     backgroundCheck.ResponseId = requestId;
                     backgroundCheck.ResponseDate = completionDate ?? ( orderDate ?? RockDateTime.Now);
@@ -502,6 +503,16 @@ namespace com.bemaservices.MinistrySafe
                             break;
                         case "InvitationExpired":
                             recommendation = "Invitation Expired";
+                            break;
+                        case "awaiting_applicant":
+                            recommendation = "Awaiting Applicant";
+                            break;
+                        case "complete":
+                            recommendation = "Candidate Review";
+                            reportStatus = "Review";
+                            break;
+                        case "cancelled":
+                            recommendation = "Cancelled";
                             break;
                     }
 
@@ -886,11 +897,12 @@ namespace com.bemaservices.MinistrySafe
                         var userId = getAllBackgroundCheckResponse.UserId;
                         var level = getAllBackgroundCheckResponse.Level;
                         var customPackageCode = getAllBackgroundCheckResponse.CustomBackgroundCheckPackageCode;
+                        var status = getAllBackgroundCheckResponse.Status;
                         var completionDate = getAllBackgroundCheckResponse.CompleteDate.AsDateTime();
                         var orderDate = getAllBackgroundCheckResponse.OrderDate.AsDateTime();
                         if ( completionDate.HasValue || getAllBackgroundCheckResponse.Status == "complete" )
                         {
-                            if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, completionDate, orderDate, workflowType ) )
+                            if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, workflowType ) )
                             {
                                 backgroundChecksProcessed++;
                             }
