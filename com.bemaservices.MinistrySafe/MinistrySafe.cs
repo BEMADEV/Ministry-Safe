@@ -460,6 +460,10 @@ namespace com.bemaservices.MinistrySafe
                     }
 
                     backgroundCheck.Status = status;
+                    if ( backgroundCheck.Status.IsNullOrWhiteSpace() )
+                    {
+                        backgroundCheck.Status = "consider";
+                    }
 
                     backgroundCheck.ResponseId = requestId;
                     backgroundCheck.ResponseDate = completionDate ?? ( orderDate ?? RockDateTime.Now);
