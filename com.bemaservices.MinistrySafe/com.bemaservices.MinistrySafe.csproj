@@ -231,7 +231,7 @@
   </Target>
   <PropertyGroup>
     <PostBuildEvent>xcopy /Y /R /E /I "$(ProjectDir)Plugins" "$(SolutionDir)RockWeb\Plugins"
-xcopy /Y /R "$(ProjectDir)bin\Debug\com.bemaservices.PastoralCare.dll" "$(SolutionDir)RockWeb\bin"
+xcopy /Y /R "$(ProjectDir)bin\Debug\com.bemaservices.MinistrySafe.dll" "$(SolutionDir)RockWeb\bin"
 xcopy /Y /R "$(ProjectDir)Webhooks\MinistrySafe.ashx" "$(SolutionDir)RockWeb\Webhooks"</PostBuildEvent>
   </PropertyGroup>
 </Project>
