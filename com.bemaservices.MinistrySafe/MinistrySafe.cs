@@ -1030,18 +1030,13 @@ namespace com.bemaservices.MinistrySafe
 
                 var requestId = backgroundCheckResponse.Id;
                 var resultsUrl = backgroundCheckResponse.ResultsUrl;
-                var status = backgroundCheckResponse.Status;
                 var completionDate = backgroundCheckResponse.CompleteDate.AsDateTime();
                 var orderDate = backgroundCheckResponse.OrderDate.AsDateTime();
 
-                backgroundCheck.Status = status;
-                if ( backgroundCheck.Status.IsNullOrWhiteSpace() )
-                {
-                    backgroundCheck.Status = "archived";
-                }
-
+                
+                backgroundCheck.Status = "archived";
                 backgroundCheck.ResponseId = requestId;
-                backgroundCheck.ResponseDate = completionDate ?? ( orderDate ?? RockDateTime.Now );
+                backgroundCheck.ResponseDate =  RockDateTime.Now;
                 if ( resultsUrl.IsNotNullOrWhiteSpace() )
                 {
                     backgroundCheck.ResponseData = resultsUrl;
