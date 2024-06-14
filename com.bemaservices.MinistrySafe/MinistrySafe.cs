@@ -248,7 +248,7 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="reportLink">The report link.</param>
         /// <param name="reportStatus">The report status.</param>
         /// <param name="rockContext">The rock context.</param>
-        private static void UpdateBackgroundCheckWorkflow( int id, string recommendation, string documentId, string reportStatus, RockContext rockContext, int? personAliasId = null)//, string customPackageCode = null, int? level = null, string userType = null )
+        private static void UpdateBackgroundCheckWorkflow( int id, string recommendation, string documentId, string reportStatus, RockContext rockContext, int? personAliasId = null )//, string customPackageCode = null, int? level = null, string userType = null )
         {
             // Make sure the workflow isn't locked (i.e., it's still being worked on by the 'SendRequest' method of the workflow
             // BackgroundCheckComponent) before we start working on it -- especially before we load the workflow's attributes.
@@ -454,7 +454,7 @@ namespace com.bemaservices.MinistrySafe
                         backgroundCheck.ForeignId = 4;
                         backgroundCheck.PackageName = "";
                         backgroundCheck.RequestDate = orderDate ?? RockDateTime.Now;
-                        
+
                         backgroundCheck.RequestId = requestId;
                         rockContext.SaveChanges();
                     }
@@ -466,7 +466,7 @@ namespace com.bemaservices.MinistrySafe
                     }
 
                     backgroundCheck.ResponseId = requestId;
-                    backgroundCheck.ResponseDate = completionDate ?? ( orderDate ?? RockDateTime.Now);
+                    backgroundCheck.ResponseDate = completionDate ?? ( orderDate ?? RockDateTime.Now );
                     if ( resultsUrl.IsNotNullOrWhiteSpace() )
                     {
                         backgroundCheck.ResponseData = resultsUrl;
@@ -931,6 +931,52 @@ namespace com.bemaservices.MinistrySafe
 
             return false;
         }
+
+        internal bool ArchiveLinkedBackgroundChecks( RockContext rockContext, Rock.Model.Workflow workflow, out List<string> errorMessages )
+        {
+            errorMessages = new List<string>();
+
+            var backgroundCheckService = new BackgroundCheckService( rockContext );
+            var backgroundChecks = backgroundCheckService.Queryable().Where( bc => bc.WorkflowId == workflow.Id ).ToList();
+            foreach ( BackgroundCheck backgroundCheck in backgroundChecks )
+            {
+                var backgroundCheckErrorMessages = new List<string>();
+                BackgroundCheckResponse backgroundCheckResponse = null;
+
+                if ( !MinistrySafeApiUtility.ArchiveBackgroundCheck( backgroundCheck.RequestId, out backgroundCheckResponse, backgroundCheckErrorMessages ) )
+                {
+                    errorMessages.Add( String.Format( "Error archiving BackgroundCheck with RockId:{0} and MinistrySafeId:{1}"
+                        , backgroundCheck.Id
+                        , backgroundCheck.RequestId ) );
+                    errorMessages.AddRange( backgroundCheckErrorMessages );
+                    return false;
+                }
+
+                var requestId = backgroundCheckResponse.Id;
+                var resultsUrl = backgroundCheckResponse.ResultsUrl;
+                var status = backgroundCheckResponse.Status;
+                var completionDate = backgroundCheckResponse.CompleteDate.AsDateTime();
+                var orderDate = backgroundCheckResponse.OrderDate.AsDateTime();
+
+                backgroundCheck.Status = status;
+                if ( backgroundCheck.Status.IsNullOrWhiteSpace() )
+                {
+                    backgroundCheck.Status = "archived";
+                }
+
+                backgroundCheck.ResponseId = requestId;
+                backgroundCheck.ResponseDate = completionDate ?? ( orderDate ?? RockDateTime.Now );
+                if ( resultsUrl.IsNotNullOrWhiteSpace() )
+                {
+                    backgroundCheck.ResponseData = resultsUrl;
+                }
+
+                rockContext.SaveChanges();
+            }
+
+            return true;
+        }
+
         #endregion
 
         #region Training Implementation
@@ -1084,7 +1130,7 @@ namespace com.bemaservices.MinistrySafe
                         if ( workflow.GetAttributeValue( "Person" ).IsNullOrWhiteSpace() && personAliasId != null )
                         {
                             var personAlias = new PersonAliasService( rockContext ).Get( personAliasId.Value );
-                            if(personAlias != null )
+                            if ( personAlias != null )
                             {
                                 if ( SaveAttributeValue( workflow, "Person", personAlias.Guid.ToString(),
                                 FieldTypeCache.Get( Rock.SystemGuid.FieldType.PERSON.AsGuid() ), rockContext ) )
@@ -1779,7 +1825,7 @@ namespace com.bemaservices.MinistrySafe
                             // have the correct attribute values.
                             workflow.SaveAttributeValues( rockContext );
                         }
-                    }                    
+                    }
 
                     _lockObjects.TryRemove( workflow.Id, out _ ); // we no longer need that lock for this workflow
                 }

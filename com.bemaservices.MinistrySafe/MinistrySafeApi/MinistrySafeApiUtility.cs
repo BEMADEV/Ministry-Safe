@@ -555,6 +555,35 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        internal static bool ArchiveBackgroundCheck( string backgroundCheckId, out BackgroundCheckResponse archiveBackgroundCheckResponse, List<string> errorMessages )
+        {
+            archiveBackgroundCheckResponse = null;
+            RestClient restClient = RestClient();
+            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}/archive", MinistrySafeConstants.MINISTRYSAFE_BACKGROUNDCHECK_URL, backgroundCheckId ), Method.PUT );
+            IRestResponse restResponse = restClient.Execute( restRequest );
+
+            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            {
+                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
+                return false;
+            }
+
+            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            {
+                errorMessages.Add( "Failed to archive MinistrySafe Background Check: " + restResponse.Content );
+                return false;
+            }
+
+            archiveBackgroundCheckResponse = JsonConvert.DeserializeObject<BackgroundCheckResponse>( restResponse.Content );
+            if ( archiveBackgroundCheckResponse == null )
+            {
+                errorMessages.Add( "Archive Background Check is not valid: " + restResponse.Content );
+                return false;
+            }
+
+            return true;
+        }
+
         internal static bool GetAllBackgroundChecks( int pageNumber, DateTime? startDate, DateTime? endDate, out List<BackgroundCheckResponse> getAllBackgroundCheckResponses, List<string> errorMessages )
         {
             getAllBackgroundCheckResponses = new List<BackgroundCheckResponse>();
