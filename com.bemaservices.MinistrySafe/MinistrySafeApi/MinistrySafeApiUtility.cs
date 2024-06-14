@@ -232,14 +232,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             if ( restResponse.StatusCode != HttpStatusCode.OK )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Users: " + restResponse.Content );
+                errorMessages.Add( "Failed to get MinistrySafe Packages: " + restResponse.Content );
                 return false;
             }
 
             getPackagesResponse = JsonConvert.DeserializeObject<List<PackageResponse>>( restResponse.Content );
             if ( getPackagesResponse == null )
             {
-                errorMessages.Add( "Get Users is not valid: " + restResponse.Content );
+                errorMessages.Add( "Get Packages is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -343,14 +343,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             if ( restResponse.StatusCode != HttpStatusCode.OK )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Users: " + restResponse.Content );
+                errorMessages.Add( "Failed to get MinistrySafe User: " + restResponse.Content );
                 return false;
             }
 
             usersResponse = JsonConvert.DeserializeObject<List<UserResponse>>( restResponse.Content );
             if ( usersResponse == null )
             {
-                errorMessages.Add( "Get Users is not valid: " + restResponse.Content );
+                errorMessages.Add( "Get User is not valid: " + restResponse.Content );
                 return false;
             }
             userResponse = usersResponse.FirstOrDefault();
@@ -379,7 +379,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             if ( restResponse.StatusCode != HttpStatusCode.OK && restResponse.StatusCode != HttpStatusCode.NoContent )
             {
-                errorMessages.Add( "Failed to update tags: " + restResponse.Content );
+                errorMessages.Add( "Failed to update User: " + restResponse.Content );
                 return false;
             }
 
@@ -490,7 +490,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             resendTrainingResponse = JsonConvert.DeserializeObject<TrainingResponse>( restResponse.Content );
             if ( resendTrainingResponse == null )
             {
-                errorMessages.Add( "Assign Training Response is not valid: " + restResponse.Content );
+                errorMessages.Add( "Resend Training Response is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -541,14 +541,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             if ( restResponse.StatusCode != HttpStatusCode.OK )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Training: " + restResponse.Content );
+                errorMessages.Add( "Failed to get MinistrySafe Background Check: " + restResponse.Content );
                 return false;
             }
 
             getBackgroundCheckResponse = JsonConvert.DeserializeObject<BackgroundCheckResponse>( restResponse.Content );
             if ( getBackgroundCheckResponse == null )
             {
-                errorMessages.Add( "Get Training is not valid: " + restResponse.Content );
+                errorMessages.Add( "Get Background Check is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -618,7 +618,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             getAllBackgroundCheckResponses = JsonConvert.DeserializeObject<List<BackgroundCheckResponse>>( restResponse.Content );
             if ( getAllBackgroundCheckResponses == null )
             {
-                errorMessages.Add( "Get All Training Response is not valid: " + restResponse.Content );
+                errorMessages.Add( "Get All Background Checks Response is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -678,7 +678,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             backgroundCheckResponse = JsonConvert.DeserializeObject<BackgroundCheckResponse>( restResponse.Content );
             if ( backgroundCheckResponse == null )
             {
-                errorMessages.Add( "Create  Background Check is not valid: " + restResponse.Content );
+                errorMessages.Add( "Create Background Check is not valid: " + restResponse.Content );
                 return false;
             }
 
