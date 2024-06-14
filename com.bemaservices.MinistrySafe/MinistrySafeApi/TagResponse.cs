@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright by the Spark Development Network
+// Copyright by BEMA Software Services
 //
 // Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,10 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
     internal class TagResponse
     {
 
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         [JsonProperty( "name" )]
         public string Name { get; set; }
     }

@@ -1,4 +1,20 @@
-﻿using System;
+﻿// <copyright>
+// Copyright by BEMA Software Services
+//
+// Licensed under the Rock Community License (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.rockrms.com/license
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,9 +23,17 @@ using Rock.Plugin;
 
 namespace com.bemaservices.MinistrySafe.Migrations
 {
+    /// <summary>
+    /// Class RequestLauncher.
+    /// Implements the <see cref="Migration" />
+    /// </summary>
+    /// <seealso cref="Migration" />
     [MigrationNumber( 11, "1.14.0" )]
     public partial class RequestLauncher : Migration
     {
+        /// <summary>
+        /// The commands to run to migrate plugin to the specific version
+        /// </summary>
         public override void Up()
         {
             AddRequestLauncherWorkflowType();
@@ -18,6 +42,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             UpdateBackgroundCheckWorkflowType();
         }
 
+        /// <summary>
+        /// Sets the request launcher visibility.
+        /// </summary>
         private void SetRequestLauncherVisibility()
         {
             Sql( @"
@@ -36,6 +63,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
 " );
         }
 
+        /// <summary>
+        /// Updates the type of the background check workflow.
+        /// </summary>
         private void UpdateBackgroundCheckWorkflowType()
         {
             #region EntityTypes
@@ -283,6 +313,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             #endregion
         }
 
+        /// <summary>
+        /// Updates the type of the training workflow.
+        /// </summary>
         private void UpdateTrainingWorkflowType()
         {
             #region EntityTypes
@@ -557,6 +590,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             #endregion
         }
 
+        /// <summary>
+        /// Adds the type of the request launcher workflow.
+        /// </summary>
         private void AddRequestLauncherWorkflowType()
         {
             #region EntityTypes
@@ -879,6 +915,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             
         }
 
+        /// <summary>
+        /// The commands to undo a migration from a specific version
+        /// </summary>
         public override void Down()
         {
         }

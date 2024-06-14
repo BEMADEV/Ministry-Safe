@@ -1,4 +1,20 @@
-﻿using System;
+﻿// <copyright>
+// Copyright by BEMA Software Services
+//
+// Licensed under the Rock Community License (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.rockrms.com/license
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,14 +23,25 @@ using Rock.Plugin;
 
 namespace com.bemaservices.MinistrySafe.Migrations
 {
+    /// <summary>
+    /// Class TrainingWorkflowUpdates.
+    /// Implements the <see cref="Migration" />
+    /// </summary>
+    /// <seealso cref="Migration" />
     [MigrationNumber( 8, "1.9.4" )]
     public partial class TrainingWorkflowUpdates : Migration
     {
+        /// <summary>
+        /// The commands to run to migrate plugin to the specific version
+        /// </summary>
         public override void Up()
         {
             AddMinistrySafeTrainingFeatures();
         }
 
+        /// <summary>
+        /// Adds the ministry safe training features.
+        /// </summary>
         private void AddMinistrySafeTrainingFeatures()
         {
             RockMigrationHelper.UpdatePersonAttribute( "FE95430C-322D-4B67-9C77-DFD1D4408725", "CB481AB7-E0F9-4A3E-B846-0F5E5C94C038", "Training Completion Date", "TrainingDate", "", "", 0, "", "0B1607AF-6900-406C-8F7F-8DC03FC253F3" );
@@ -377,6 +404,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             #endregion
         }
 
+        /// <summary>
+        /// The commands to undo a migration from a specific version
+        /// </summary>
         public override void Down()
         {
         }

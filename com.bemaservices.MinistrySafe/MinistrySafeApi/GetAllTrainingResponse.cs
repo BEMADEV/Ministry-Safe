@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright by the Spark Development Network
+// Copyright by BEMA Software Services
 //
 // Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,10 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
     /// </summary>
     internal class GetAllTrainingResponse : GetTrainingResponse
     {
+        /// <summary>
+        /// Gets or sets the participant.
+        /// </summary>
+        /// <value>The participant.</value>
         [JsonProperty( "participant" )]
         public UserResponse Participant { get; set; }
     }

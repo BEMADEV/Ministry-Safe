@@ -1,4 +1,20 @@
-﻿using System.Collections.Generic;
+﻿// <copyright>
+// Copyright by BEMA Software Services
+//
+// Licensed under the Rock Community License (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.rockrms.com/license
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+//
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Newtonsoft.Json;
@@ -14,6 +30,9 @@ using Rock;
 
 namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 {
+    /// <summary>
+    /// Class MinistrySafeApiUtility.
+    /// </summary>
     internal static class MinistrySafeApiUtility
     {
         #region Utilities        
@@ -21,7 +40,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// Gets the settings.
         /// </summary>
         /// <param name="rockContext">The rock context.</param>
-        /// <returns></returns>
+        /// <returns>List&lt;AttributeValue&gt;.</returns>
         private static List<AttributeValue> GetSettings( RockContext rockContext )
         {
             var ministrySafeEntityType = EntityTypeCache.Get( typeof( com.bemaservices.MinistrySafe.MinistrySafe ) );
@@ -41,7 +60,8 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// </summary>
         /// <param name="values">The values.</param>
         /// <param name="key">The key.</param>
-        /// <returns></returns>
+        /// <param name="encryptedValue">if set to <c>true</c> [encrypted value].</param>
+        /// <returns>System.String.</returns>
         private static string GetSettingValue( List<AttributeValue> values, string key, bool encryptedValue = false )
         {
             string value = values
@@ -144,7 +164,8 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <summary>
         /// Gets the packages.
         /// </summary>
-        /// <param name="getPackagesResponse">The get packages response.</param>
+        /// <param name="userId">The user identifier.</param>
+        /// <param name="getUserResponse">The get user response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         internal static bool GetUser( string userId, out UserResponse getUserResponse, List<string> errorMessages )
@@ -179,7 +200,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <summary>
         /// Gets the packages.
         /// </summary>
-        /// <param name="getPackagesResponse">The get packages response.</param>
+        /// <param name="getUsersResponse">The get users response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         internal static bool GetUsers( out List<UserResponse> getUsersResponse, List<string> errorMessages )
@@ -246,6 +267,12 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        /// <summary>
+        /// Gets the tags.
+        /// </summary>
+        /// <param name="getTagsResponse">The get tags response.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool GetTags( out List<TagResponse> getTagsResponse, List<string> errorMessages )
         {
             getTagsResponse = null;
@@ -278,8 +305,12 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <summary>
         /// Creates the candidate.
         /// </summary>
+        /// <param name="workflow">The workflow.</param>
         /// <param name="person">The person.</param>
-        /// <param name="createCandidateResponse">The create candidate response.</param>
+        /// <param name="personAliasId">The person alias identifier.</param>
+        /// <param name="userType">Type of the user.</param>
+        /// <param name="tagList">The tag list.</param>
+        /// <param name="createUserResponse">The create user response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         internal static bool CreateUser( Rock.Model.Workflow workflow, Person person, int personAliasId, string userType, string tagList, out UserResponse createUserResponse, List<string> errorMessages )
@@ -325,6 +356,15 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        /// <summary>
+        /// Gets the user.
+        /// </summary>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="person">The person.</param>
+        /// <param name="personAliasId">The person alias identifier.</param>
+        /// <param name="userResponse">The user response.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public static bool GetUser( Rock.Model.Workflow workflow, Person person, int personAliasId, out UserResponse userResponse, List<string> errorMessages )
         {
             userResponse = null;
@@ -358,6 +398,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return userResponse != null;
         }
 
+        /// <summary>
+        /// Updates the user.
+        /// </summary>
+        /// <param name="candidateId">The candidate identifier.</param>
+        /// <param name="email">The email.</param>
+        /// <param name="tagList">The tag list.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool UpdateUser( int candidateId, string email, string tagList, out List<string> errorMessages )
         {
             errorMessages = new List<string>();
@@ -390,8 +438,8 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// Creates the invitation.
         /// </summary>
         /// <param name="candidateId">The candidate identifier.</param>
-        /// <param name="package">The package.</param>
-        /// <param name="createInvitationResponse">The create invitation response.</param>
+        /// <param name="surveyCode">The survey code.</param>
+        /// <param name="assignTrainingResponse">The assign training response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         internal static bool AssignTraining( string candidateId, string surveyCode, out TrainingResponse assignTrainingResponse, List<string> errorMessages )
@@ -425,6 +473,15 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        /// <summary>
+        /// Gets all trainings.
+        /// </summary>
+        /// <param name="pageNumber">The page number.</param>
+        /// <param name="startDate">The start date.</param>
+        /// <param name="endDate">The end date.</param>
+        /// <param name="getAllTrainingResponses">The get all training responses.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool GetAllTrainings( int pageNumber, DateTime? startDate, DateTime? endDate, out List<GetAllTrainingResponse> getAllTrainingResponses, List<string> errorMessages )
         {
             getAllTrainingResponses = new List<GetAllTrainingResponse>();
@@ -466,6 +523,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        /// <summary>
+        /// Resends the training.
+        /// </summary>
+        /// <param name="candidateId">The candidate identifier.</param>
+        /// <param name="surveyCode">The survey code.</param>
+        /// <param name="resendTrainingResponse">The resend training response.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool ResendTraining( string candidateId, string surveyCode, out TrainingResponse resendTrainingResponse, List<string> errorMessages )
         {
             resendTrainingResponse = null;
@@ -497,6 +562,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        /// <summary>
+        /// Gets the training for user.
+        /// </summary>
+        /// <param name="candidateId">The candidate identifier.</param>
+        /// <param name="getReportResponse">The get report response.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool GetTrainingForUser( string candidateId, out GetTrainingResponse getReportResponse, List<string> errorMessages )
         {
             getReportResponse = null;
@@ -526,6 +598,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        /// <summary>
+        /// Gets the background check.
+        /// </summary>
+        /// <param name="backgroundCheckId">The background check identifier.</param>
+        /// <param name="getBackgroundCheckResponse">The get background check response.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool GetBackgroundCheck( string backgroundCheckId, out BackgroundCheckResponse getBackgroundCheckResponse, List<string> errorMessages )
         {
             getBackgroundCheckResponse = null;
@@ -555,6 +634,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        /// <summary>
+        /// Archives the background check.
+        /// </summary>
+        /// <param name="backgroundCheckId">The background check identifier.</param>
+        /// <param name="archiveBackgroundCheckResponse">The archive background check response.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool ArchiveBackgroundCheck( string backgroundCheckId, out BackgroundCheckResponse archiveBackgroundCheckResponse, List<string> errorMessages )
         {
             archiveBackgroundCheckResponse = null;
@@ -584,6 +670,15 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        /// <summary>
+        /// Gets all background checks.
+        /// </summary>
+        /// <param name="pageNumber">The page number.</param>
+        /// <param name="startDate">The start date.</param>
+        /// <param name="endDate">The end date.</param>
+        /// <param name="getAllBackgroundCheckResponses">The get all background check responses.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool GetAllBackgroundChecks( int pageNumber, DateTime? startDate, DateTime? endDate, out List<BackgroundCheckResponse> getAllBackgroundCheckResponses, List<string> errorMessages )
         {
             getAllBackgroundCheckResponses = new List<BackgroundCheckResponse>();
@@ -625,6 +720,19 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        /// <summary>
+        /// Creates the background check.
+        /// </summary>
+        /// <param name="userId">The user identifier.</param>
+        /// <param name="level">The level.</param>
+        /// <param name="packageCode">The package code.</param>
+        /// <param name="userType">Type of the user.</param>
+        /// <param name="childServing">if set to <c>true</c> [child serving].</param>
+        /// <param name="over13">if set to <c>true</c> [over13].</param>
+        /// <param name="salaryRange">The salary range.</param>
+        /// <param name="backgroundCheckResponse">The background check response.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool CreateBackgroundCheck( string userId, string level, string packageCode, string userType, bool? childServing, bool? over13, string salaryRange, out BackgroundCheckResponse backgroundCheckResponse, List<string> errorMessages )
         {
             backgroundCheckResponse = null;

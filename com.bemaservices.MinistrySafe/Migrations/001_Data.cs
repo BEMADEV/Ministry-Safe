@@ -1,4 +1,20 @@
-﻿using System;
+﻿// <copyright>
+// Copyright by BEMA Software Services
+//
+// Licensed under the Rock Community License (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.rockrms.com/license
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,9 +23,17 @@ using Rock.Plugin;
 
 namespace com.bemaservices.MinistrySafe.Migrations
 {
+    /// <summary>
+    /// Class Data.
+    /// Implements the <see cref="Migration" />
+    /// </summary>
+    /// <seealso cref="Migration" />
     [MigrationNumber( 1, "1.8.5" )]
     public class Data : Migration
     {
+        /// <summary>
+        /// The commands to run to migrate plugin to the specific version
+        /// </summary>
         public override void Up()
         {
             Sql( @"
@@ -143,6 +167,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
                 </div>
             </div>" );
         }
+        /// <summary>
+        /// The commands to undo a migration from a specific version
+        /// </summary>
         public override void Down()
         {
             RockMigrationHelper.DeleteEntityType( "F6261353-1C34-4CE0-8E8C-201AB1A1CA94" );
@@ -156,6 +183,14 @@ namespace com.bemaservices.MinistrySafe.Migrations
 " );
         }
 
+        /// <summary>
+        /// Updates the badge.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="description">The description.</param>
+        /// <param name="entityTypeName">Name of the entity type.</param>
+        /// <param name="order">The order.</param>
+        /// <param name="guid">The unique identifier.</param>
         public void UpdateBadge( string name, string description, string entityTypeName, int order, string guid )
         {
             Sql( string.Format( @"
@@ -188,6 +223,12 @@ namespace com.bemaservices.MinistrySafe.Migrations
             );
         }
 
+        /// <summary>
+        /// Adds the badge attribute value.
+        /// </summary>
+        /// <param name="personBadgeGuid">The person badge unique identifier.</param>
+        /// <param name="attributeGuid">The attribute unique identifier.</param>
+        /// <param name="value">The value.</param>
         public void AddBadgeAttributeValue( string personBadgeGuid, string attributeGuid, string value )
         {
             Sql( string.Format( @"

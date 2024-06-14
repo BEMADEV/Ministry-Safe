@@ -30,7 +30,12 @@ using Rock.Web.UI.Controls;
 
 namespace com.bemaservices.MinistrySafe.Jobs
 {
- 
+
+    /// <summary>
+    /// Class ImportTrainings.
+    /// Implements the <see cref="IJob" />
+    /// </summary>
+    /// <seealso cref="IJob" />
     [SlidingDateRangeField( "Date Range", "The date range of trainings to import.", required: true )]
     [WorkflowTypeField( "Workflow Type", "An optional workflow type to fire for trainings without an existing workflow.", required: false )]
     [DisallowConcurrentExecution]
