@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright by the Spark Development Network
+// Copyright by BEMA Software Services
 //
 // Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
@@ -70,9 +70,7 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="requestTypeAttribute">The request type attribute.</param>
         /// <param name="billingCodeAttribute">The billing code attribute.</param>
         /// <param name="errorMessages">The error messages.</param>
-        /// <returns>
-        /// True/False value of whether the request was successfully sent or not.
-        /// </returns>
+        /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         public override bool SendRequest( RockContext rockContext, Rock.Model.Workflow workflow,
                     AttributeCache personAttribute, AttributeCache ssnAttribute, AttributeCache requestTypeAttribute,
                     AttributeCache billingCodeAttribute, out List<string> errorMessages )
@@ -213,8 +211,8 @@ namespace com.bemaservices.MinistrySafe
         /// Gets the URL to the background check report.
         /// Note: Also used by GetBackgroundCheck.ashx.cs, ProcessRequest( HttpContext context )
         /// </summary>
-        /// <param name="reportKey">The report key.</param>
-        /// <returns></returns>
+        /// <param name="backgroundCheckId">The background check identifier.</param>
+        /// <returns>System.String.</returns>
         public override string GetReportUrl( string backgroundCheckId )
         {
             var isAuthorized = this.IsAuthorized( Authorization.VIEW, this.GetCurrentPerson() );
@@ -245,10 +243,11 @@ namespace com.bemaservices.MinistrySafe
         /// </summary>
         /// <param name="id">The identifier.</param>
         /// <param name="recommendation">The recommendation.</param>
-        /// <param name="reportLink">The report link.</param>
+        /// <param name="documentId">The document identifier.</param>
         /// <param name="reportStatus">The report status.</param>
         /// <param name="rockContext">The rock context.</param>
-        private static void UpdateBackgroundCheckWorkflow( int id, string recommendation, string documentId, string reportStatus, RockContext rockContext, int? personAliasId = null)//, string customPackageCode = null, int? level = null, string userType = null )
+        /// <param name="personAliasId">The person alias identifier.</param>
+        private static void UpdateBackgroundCheckWorkflow( int id, string recommendation, string documentId, string reportStatus, RockContext rockContext, int? personAliasId = null )//, string customPackageCode = null, int? level = null, string userType = null )
         {
             // Make sure the workflow isn't locked (i.e., it's still being worked on by the 'SendRequest' method of the workflow
             // BackgroundCheckComponent) before we start working on it -- especially before we load the workflow's attributes.
@@ -399,11 +398,7 @@ namespace com.bemaservices.MinistrySafe
         /// <summary>
         /// Updates the background check and workflow values.
         /// </summary>
-        /// <param name="candidateId">The candidate identifier.</param>
-        /// <param name="webhookTypes">The webhook types.</param>
-        /// <param name="packageName">Name of the package.</param>
-        /// <param name="status">The status.</param>
-        /// <param name="documentId">The document identifier.</param>
+        /// <param name="backgroundCheckWebhook">The background check webhook.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         private static bool UpdateBackgroundCheckAndWorkFlow( BackgroundCheckWebhook backgroundCheckWebhook )
         {
@@ -421,6 +416,20 @@ namespace com.bemaservices.MinistrySafe
             return UpdateBackgroundCheck( requestId, externalId, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate );
         }
 
+        /// <summary>
+        /// Updates the background check.
+        /// </summary>
+        /// <param name="requestId">The request identifier.</param>
+        /// <param name="externalId">The external identifier.</param>
+        /// <param name="resultsUrl">The results URL.</param>
+        /// <param name="userId">The user identifier.</param>
+        /// <param name="level">The level.</param>
+        /// <param name="customPackageCode">The custom package code.</param>
+        /// <param name="status">The status.</param>
+        /// <param name="completionDate">The completion date.</param>
+        /// <param name="orderDate">The order date.</param>
+        /// <param name="workflowTypeCache">The workflow type cache.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         private static bool UpdateBackgroundCheck( string requestId, string externalId, string resultsUrl, int? userId, int? level, string customPackageCode, string status, DateTime? completionDate, DateTime? orderDate, WorkflowTypeCache workflowTypeCache = null )
         {
             try
@@ -454,7 +463,7 @@ namespace com.bemaservices.MinistrySafe
                         backgroundCheck.ForeignId = 4;
                         backgroundCheck.PackageName = "";
                         backgroundCheck.RequestDate = orderDate ?? RockDateTime.Now;
-                        
+
                         backgroundCheck.RequestId = requestId;
                         rockContext.SaveChanges();
                     }
@@ -466,7 +475,7 @@ namespace com.bemaservices.MinistrySafe
                     }
 
                     backgroundCheck.ResponseId = requestId;
-                    backgroundCheck.ResponseDate = completionDate ?? ( orderDate ?? RockDateTime.Now);
+                    backgroundCheck.ResponseDate = completionDate ?? ( orderDate ?? RockDateTime.Now );
                     if ( resultsUrl.IsNotNullOrWhiteSpace() )
                     {
                         backgroundCheck.ResponseData = resultsUrl;
@@ -660,6 +669,14 @@ namespace com.bemaservices.MinistrySafe
             return true;
         }
 
+        /// <summary>
+        /// Adds the package.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="definedType">Type of the defined.</param>
+        /// <param name="definedValueService">The defined value service.</param>
+        /// <param name="packageResponse">The package response.</param>
+        /// <param name="userType">Type of the user.</param>
         private static void AddPackage( RockContext rockContext, DefinedTypeCache definedType, DefinedValueService definedValueService, PackageResponse packageResponse, DefinedValue userType = null )
         {
             DefinedValue definedValue = null;
@@ -696,7 +713,10 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="rockContext">The rock context.</param>
         /// <param name="workflow">The Workflow initiating the request.</param>
         /// <param name="requestTypeAttribute">The request type attribute.</param>
-        /// <param name="packageName"></param>
+        /// <param name="level">The level.</param>
+        /// <param name="packageCode">The package code.</param>
+        /// <param name="userType">Type of the user.</param>
+        /// <param name="packageName">Name of the package.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         private bool GetPackageName( RockContext rockContext, Rock.Model.Workflow workflow, AttributeCache requestTypeAttribute, out string level, out string packageCode, out string userType, out string packageName, List<string> errorMessages )
@@ -738,6 +758,11 @@ namespace com.bemaservices.MinistrySafe
             return true;
         }
 
+        /// <summary>
+        /// Updates the tags.
+        /// </summary>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public static bool UpdateTags( List<string> errorMessages )
         {
             List<TagResponse> tagResponseList;
@@ -799,6 +824,14 @@ namespace com.bemaservices.MinistrySafe
             return true;
         }
 
+        /// <summary>
+        /// Gets the child serving.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="childServing">if set to <c>true</c> [child serving].</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         private bool GetChildServing( RockContext rockContext, Rock.Model.Workflow workflow, out bool? childServing, List<string> errorMessages )
         {
             childServing = null;
@@ -814,6 +847,14 @@ namespace com.bemaservices.MinistrySafe
             return true;
         }
 
+        /// <summary>
+        /// Gets the over thirteen.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="over13">if set to <c>true</c> [over13].</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         private bool GetOverThirteen( RockContext rockContext, Rock.Model.Workflow workflow, out bool? over13, List<string> errorMessages )
         {
             over13 = null;
@@ -829,6 +870,14 @@ namespace com.bemaservices.MinistrySafe
             return true;
         }
 
+        /// <summary>
+        /// Gets the salary range.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="salaryRange">The salary range.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         private bool GetSalaryRange( RockContext rockContext, Rock.Model.Workflow workflow, out string salaryRange, List<string> errorMessages )
         {
             salaryRange = null;
@@ -842,6 +891,14 @@ namespace com.bemaservices.MinistrySafe
             salaryRange = workflow.GetAttributeValue( "SalaryRange" );
             return true;
         }
+        /// <summary>
+        /// Gets the type of the employee.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="employeeType">Type of the employee.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         private bool GetEmployeeType( RockContext rockContext, Rock.Model.Workflow workflow, out string employeeType, List<string> errorMessages )
         {
             employeeType = null;
@@ -861,11 +918,15 @@ namespace com.bemaservices.MinistrySafe
         /// <summary>
         /// Creates the invitation.
         /// </summary>
-        /// <param name="candidateId">The candidate identifier.</param>
-        /// <param name="package">The package.</param>
+        /// <param name="userId">The user identifier.</param>
+        /// <param name="level">The level.</param>
+        /// <param name="packageCode">The package code.</param>
+        /// <param name="userType">Type of the user.</param>
+        /// <param name="childServing">if set to <c>true</c> [child serving].</param>
+        /// <param name="over13">if set to <c>true</c> [over13].</param>
+        /// <param name="salaryRange">The salary range.</param>
+        /// <param name="requestId">The request identifier.</param>
         /// <param name="errorMessages">The error messages.</param>
-        /// <param name="request">The request.</param>
-        /// <param name="response">The response.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         public static bool CreateBackgroundCheck( string userId, string level, string packageCode, string userType, bool? childServing, bool? over13, string salaryRange, out string requestId, List<string> errorMessages )
         {
@@ -881,6 +942,14 @@ namespace com.bemaservices.MinistrySafe
             return false;
         }
 
+        /// <summary>
+        /// Imports the background checks.
+        /// </summary>
+        /// <param name="dateRange">The date range.</param>
+        /// <param name="workflowType">Type of the workflow.</param>
+        /// <param name="backgroundChecksProcessed">The background checks processed.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal bool ImportBackgroundChecks( DateRange dateRange, WorkflowTypeCache workflowType, out int backgroundChecksProcessed, out List<string> errorMessages )
         {
             var startDate = dateRange.Start;
@@ -931,10 +1000,69 @@ namespace com.bemaservices.MinistrySafe
 
             return false;
         }
+
+        /// <summary>
+        /// Archives the linked background checks.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        internal bool ArchiveLinkedBackgroundChecks( RockContext rockContext, Rock.Model.Workflow workflow, out List<string> errorMessages )
+        {
+            errorMessages = new List<string>();
+
+            var backgroundCheckService = new BackgroundCheckService( rockContext );
+            var backgroundChecks = backgroundCheckService.Queryable().Where( bc => bc.WorkflowId == workflow.Id ).ToList();
+            foreach ( BackgroundCheck backgroundCheck in backgroundChecks )
+            {
+                var backgroundCheckErrorMessages = new List<string>();
+                BackgroundCheckResponse backgroundCheckResponse = null;
+
+                if ( !MinistrySafeApiUtility.ArchiveBackgroundCheck( backgroundCheck.RequestId, out backgroundCheckResponse, backgroundCheckErrorMessages ) )
+                {
+                    errorMessages.Add( String.Format( "Error archiving BackgroundCheck with RockId:{0} and MinistrySafeId:{1}"
+                        , backgroundCheck.Id
+                        , backgroundCheck.RequestId ) );
+                    errorMessages.AddRange( backgroundCheckErrorMessages );
+                    return false;
+                }
+
+                var requestId = backgroundCheckResponse.Id;
+                var resultsUrl = backgroundCheckResponse.ResultsUrl;
+                var completionDate = backgroundCheckResponse.CompleteDate.AsDateTime();
+                var orderDate = backgroundCheckResponse.OrderDate.AsDateTime();
+
+                
+                backgroundCheck.Status = "archived";
+                backgroundCheck.ResponseId = requestId;
+                backgroundCheck.ResponseDate =  RockDateTime.Now;
+                if ( resultsUrl.IsNotNullOrWhiteSpace() )
+                {
+                    backgroundCheck.ResponseData = resultsUrl;
+                }
+
+                rockContext.SaveChanges();
+            }
+
+            return true;
+        }
+
         #endregion
 
         #region Training Implementation
 
+        /// <summary>
+        /// Sends the training.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="personAttribute">The person attribute.</param>
+        /// <param name="userTypeAttribute">The user type attribute.</param>
+        /// <param name="surveyTypeAttribute">The survey type attribute.</param>
+        /// <param name="directLoginUrlAttribute">The direct login URL attribute.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public bool SendTraining( RockContext rockContext, Rock.Model.Workflow workflow,
                  AttributeCache personAttribute, AttributeCache userTypeAttribute, AttributeCache surveyTypeAttribute, AttributeCache directLoginUrlAttribute,
                  out List<string> errorMessages )
@@ -1063,10 +1191,11 @@ namespace com.bemaservices.MinistrySafe
         /// Updates the workflow, closing it if the reportStatus is blank and the recommendation is "Invitation Expired".
         /// </summary>
         /// <param name="id">The identifier.</param>
-        /// <param name="recommendation">The recommendation.</param>
-        /// <param name="reportLink">The report link.</param>
-        /// <param name="reportStatus">The report status.</param>
+        /// <param name="score">The score.</param>
+        /// <param name="completedDateTime">The completed date time.</param>
         /// <param name="rockContext">The rock context.</param>
+        /// <param name="surveyCode">The survey code.</param>
+        /// <param name="personAliasId">The person alias identifier.</param>
         private static void UpdateTrainingWorkflow( int id, int? score, DateTime completedDateTime, RockContext rockContext, string surveyCode = null, int? personAliasId = null )
         {
             // Make sure the workflow isn't locked (i.e., it's still being worked on by the 'SendRequest' method of the workflow
@@ -1084,7 +1213,7 @@ namespace com.bemaservices.MinistrySafe
                         if ( workflow.GetAttributeValue( "Person" ).IsNullOrWhiteSpace() && personAliasId != null )
                         {
                             var personAlias = new PersonAliasService( rockContext ).Get( personAliasId.Value );
-                            if(personAlias != null )
+                            if ( personAlias != null )
                             {
                                 if ( SaveAttributeValue( workflow, "Person", personAlias.Guid.ToString(),
                                 FieldTypeCache.Get( Rock.SystemGuid.FieldType.PERSON.AsGuid() ), rockContext ) )
@@ -1163,6 +1292,14 @@ namespace com.bemaservices.MinistrySafe
             }
         }
 
+        /// <summary>
+        /// Imports the trainings.
+        /// </summary>
+        /// <param name="dateRange">The date range.</param>
+        /// <param name="workflowType">Type of the workflow.</param>
+        /// <param name="trainingsProcessed">The trainings processed.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal bool ImportTrainings( DateRange dateRange, WorkflowTypeCache workflowType, out int trainingsProcessed, out List<string> errorMessages )
         {
             var startDate = dateRange.Start;
@@ -1215,11 +1352,7 @@ namespace com.bemaservices.MinistrySafe
         /// <summary>
         /// Updates the user and workflow values.
         /// </summary>
-        /// <param name="candidateId">The candidate identifier.</param>
-        /// <param name="webhookTypes">The webhook types.</param>
-        /// <param name="packageName">Name of the package.</param>
-        /// <param name="status">The status.</param>
-        /// <param name="documentId">The document identifier.</param>
+        /// <param name="trainingWebhook">The training webhook.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         private static bool UpdateTrainingFromWebhook( TrainingWebhook trainingWebhook )
         {
@@ -1233,6 +1366,17 @@ namespace com.bemaservices.MinistrySafe
 
         }
 
+        /// <summary>
+        /// Updates the training.
+        /// </summary>
+        /// <param name="externalId">The external identifier.</param>
+        /// <param name="userId">The user identifier.</param>
+        /// <param name="score">The score.</param>
+        /// <param name="surveyCode">The survey code.</param>
+        /// <param name="completedDateTime">The completed date time.</param>
+        /// <param name="createdDateTime">The created date time.</param>
+        /// <param name="workflowTypeCache">The workflow type cache.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         private static bool UpdateTraining( string externalId, string userId, int? score, string surveyCode, DateTime completedDateTime, DateTime? createdDateTime, WorkflowTypeCache workflowTypeCache = null )
         {
             var rockContext = new RockContext();
@@ -1319,6 +1463,13 @@ namespace com.bemaservices.MinistrySafe
             return true;
         }
 
+        /// <summary>
+        /// Finds the rock person.
+        /// </summary>
+        /// <param name="userId">The user identifier.</param>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns>System.String.</returns>
         private static string FindRockPerson( string userId, RockContext rockContext, List<string> errorMessages )
         {
             var externalId = string.Empty;
@@ -1375,6 +1526,13 @@ namespace com.bemaservices.MinistrySafe
             return externalId;
         }
 
+        /// <summary>
+        /// Finds the type of the user.
+        /// </summary>
+        /// <param name="userId">The user identifier.</param>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns>System.String.</returns>
         private static string FindUserType( string userId, RockContext rockContext, List<string> errorMessages )
         {
             var userType = string.Empty;
@@ -1407,8 +1565,8 @@ namespace com.bemaservices.MinistrySafe
         /// </summary>
         /// <param name="rockContext">The rock context.</param>
         /// <param name="workflow">The Workflow initiating the request.</param>
-        /// <param name="requestTypeAttribute">The request type attribute.</param>
-        /// <param name="packageName"></param>
+        /// <param name="surveyTypeAttribute">The survey type attribute.</param>
+        /// <param name="packageName">Name of the package.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         private bool GetSurveyTypeName( RockContext rockContext, Rock.Model.Workflow workflow, AttributeCache surveyTypeAttribute, out string packageName, List<string> errorMessages )
@@ -1438,6 +1596,15 @@ namespace com.bemaservices.MinistrySafe
             return true;
         }
 
+        /// <summary>
+        /// Gets the name of the user type.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="userTypeAttribute">The user type attribute.</param>
+        /// <param name="userTypeName">Name of the user type.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         private bool GetUserTypeName( RockContext rockContext, Rock.Model.Workflow workflow, AttributeCache userTypeAttribute, out string userTypeName, List<string> errorMessages )
         {
             userTypeName = null;
@@ -1468,10 +1635,8 @@ namespace com.bemaservices.MinistrySafe
         /// Creates the invitation.
         /// </summary>
         /// <param name="candidateId">The candidate identifier.</param>
-        /// <param name="package">The package.</param>
+        /// <param name="surveyCode">The survey code.</param>
         /// <param name="errorMessages">The error messages.</param>
-        /// <param name="request">The request.</param>
-        /// <param name="response">The response.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         public static bool AssignTraining( string candidateId, string surveyCode, List<string> errorMessages )
         {
@@ -1508,7 +1673,7 @@ namespace com.bemaservices.MinistrySafe
         /// <summary>
         /// Gets the person that is currently logged in.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Person.</returns>
         private Person GetCurrentPerson()
         {
             using ( var rockContext = new RockContext() )
@@ -1630,15 +1795,13 @@ namespace com.bemaservices.MinistrySafe
         /// <summary>
         /// Creates the candidate.
         /// </summary>
+        /// <param name="workflow">The workflow.</param>
         /// <param name="person">The person.</param>
+        /// <param name="personAliasId">The person alias identifier.</param>
+        /// <param name="userTypeName">Name of the user type.</param>
+        /// <param name="tagList">The tag list.</param>
         /// <param name="candidateId">The candidate identifier.</param>
-        /// <param name="errorMessages">The error messages.</param>
-        /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        /// <summary>
-        /// Creates the candidate.
-        /// </summary>
-        /// <param name="person">The person.</param>
-        /// <param name="candidateId">The candidate identifier.</param>
+        /// <param name="directLoginUrl">The direct login URL.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         public static bool GetOrCreateUser( Rock.Model.Workflow workflow, Person person, int personAliasId, string userTypeName, string tagList, out string candidateId, out string directLoginUrl, List<string> errorMessages )
@@ -1719,6 +1882,14 @@ namespace com.bemaservices.MinistrySafe
             return UpdateTrainingFromWebhook( trainingWebhook );
         }
 
+        /// <summary>
+        /// Gets the user tags.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="personAttribute">The person attribute.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal bool GetUserTags( RockContext rockContext, Rock.Model.Workflow workflow, AttributeCache personAttribute, out List<string> errorMessages )
         {
             errorMessages = new List<string>();
@@ -1779,7 +1950,7 @@ namespace com.bemaservices.MinistrySafe
                             // have the correct attribute values.
                             workflow.SaveAttributeValues( rockContext );
                         }
-                    }                    
+                    }
 
                     _lockObjects.TryRemove( workflow.Id, out _ ); // we no longer need that lock for this workflow
                 }
@@ -1797,6 +1968,14 @@ namespace com.bemaservices.MinistrySafe
         }
 
 
+        /// <summary>
+        /// Gets the tags.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="tagList">The tag list.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         private bool GetTags( RockContext rockContext, Rock.Model.Workflow workflow, out string tagList, List<string> errorMessages )
         {
             tagList = null;

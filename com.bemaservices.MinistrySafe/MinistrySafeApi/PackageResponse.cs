@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright by the Spark Development Network
+// Copyright by BEMA Software Services
 //
 // Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,21 +26,35 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <summary>
         /// Gets or sets the candidate ID.
         /// </summary>
-        /// <value>
-        /// The candidate ID.
-        /// </value>
+        /// <value>The candidate ID.</value>
         [JsonProperty( "id" )]
         public string Id { get; set; }
 
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         [JsonProperty( "name" )]
         public string Name { get; set; }
 
+        /// <summary>
+        /// Gets or sets the code.
+        /// </summary>
+        /// <value>The code.</value>
         [JsonProperty( "code" )]
         public string Code { get; set; }
 
+        /// <summary>
+        /// Gets or sets the price.
+        /// </summary>
+        /// <value>The price.</value>
         [JsonProperty( "price" )]
         public decimal Price { get; set; }
-   
+
+        /// <summary>
+        /// Gets or sets the level.
+        /// </summary>
+        /// <value>The level.</value>
         public int? Level { get; set; }
     }
 }

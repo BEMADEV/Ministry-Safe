@@ -33,13 +33,11 @@ namespace com.bemaservices.MinistrySafe.Workflow.Action
     /// Sends a MinistrySafe Awareness Training.
     /// </summary>
     [ActionCategory( "BEMA Services > MinistrySafe" )]
-    [Description( "Gets Existing Tags for a User." )]
+    [Description( "Archives Background Checks linked to the current Workflow." )]
     [Export( typeof( ActionComponent ) )]
-    [ExportMetadata( "ComponentName", "MinistrySafe Get User Tags" )]
+    [ExportMetadata( "ComponentName", "MinistrySafe Archive Background Check" )]
 
-    [WorkflowAttribute( "Person Attribute", "The Person attribute that contains the user.", true, "", "", 1, null,
-        new string[] { "Rock.Field.Types.PersonFieldType" } )]
-    public class GetUserTags : ActionComponent
+    public class ArchiveBackgroundCheck : ActionComponent
     {
         /// <summary>
         /// Executes the specified workflow.
@@ -54,10 +52,9 @@ namespace com.bemaservices.MinistrySafe.Workflow.Action
             errorMessages = new List<string>();
 
             var provider = new MinistrySafe();
-            var personAttribute = AttributeCache.Get( GetAttributeValue( action, "PersonAttribute" ).AsGuid() );
 
             var ministrySafe = new MinistrySafe();
-            return ministrySafe.GetUserTags( rockContext, action.Activity.Workflow, personAttribute, out errorMessages );
+            return ministrySafe.ArchiveLinkedBackgroundChecks( rockContext, action.Activity.Workflow, out errorMessages );
         }
     }
 }

@@ -1,4 +1,20 @@
-﻿using System;
+﻿// <copyright>
+// Copyright by BEMA Software Services
+//
+// Licensed under the Rock Community License (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.rockrms.com/license
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,9 +23,17 @@ using Rock.Plugin;
 
 namespace com.bemaservices.MinistrySafe.Migrations
 {
+    /// <summary>
+    /// Class BackgroundChecks.
+    /// Implements the <see cref="Migration" />
+    /// </summary>
+    /// <seealso cref="Migration" />
     [MigrationNumber( 7, "1.9.4" )]
     public partial class BackgroundChecks : Migration
     {
+        /// <summary>
+        /// The commands to run to migrate plugin to the specific version
+        /// </summary>
         public override void Up()
         {
             UpdateTerminology();
@@ -28,6 +52,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
 
         }
 
+        /// <summary>
+        /// Backgrounds the check defined type attributes.
+        /// </summary>
         private void BackgroundCheckDefinedTypeAttributes()
         {
             RockMigrationHelper.AddDefinedTypeAttribute( "BC2FDF9A-93B8-4325-8DE9-2F7B1943BFDF", "3EE69CBC-35CE-4496-88CC-8327A447603F", "MinistrySafe Package Price", "MinistrySafePackagePrice", "", 1044, "", "64066AB0-CFAB-4F2F-BFF9-5919B0961345" );
@@ -49,6 +76,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.AddAttributeQualifier( "BDF854B3-D62A-456B-A267-5DB95793CEC7", "showcountdown", "False", "4AD120D7-81F8-41CB-B1E6-E0AD0BA8CD43" );
         }
 
+        /// <summary>
+        /// Backgrounds the check report page.
+        /// </summary>
         private void BackgroundCheckReportPage()
         {
             // Page: Background Check Report
@@ -140,6 +170,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.AddBlockAttributeValue( "7D8ACCC9-2EDF-4C87-A6AB-EA22DBC62D8E", "BEEE38DD-2791-4242-84B6-0495904143CC", @"30" );
         }
 
+        /// <summary>
+        /// Backgrounds the check badge.
+        /// </summary>
         private void BackgroundCheckBadge()
         {
             // Person Profile Badge
@@ -177,6 +210,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.AddBlockAttributeValue( "F3E6CC14-C540-4FFC-A5A9-48AD9CC0A61B", "F5AB231E-3836-4D52-BD03-BF79773C237A", "44FE66BE-C43F-43C7-AA8E-5209926C9945", true );
         }
 
+        /// <summary>
+        /// Backgrounds the check workflow.
+        /// </summary>
         private void BackgroundCheckWorkflow()
         {
             RockMigrationHelper.UpdateFieldType( "Background Check", "", "Rock", "Rock.Field.Types.BackgroundCheckFieldType", Rock.SystemGuid.FieldType.BACKGROUNDCHECK );
@@ -604,6 +640,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
 
         }
 
+        /// <summary>
+        /// Adds the background check page.
+        /// </summary>
         private void AddBackgroundCheckPage()
         {
             // Page: MinistrySafe Background Checks
@@ -672,6 +711,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.UpdateHtmlContentBlock( "C35C1CC6-CEEA-4854-B4D3-A1E0B30C727C", "{% include '~/Plugins/com_bemaservices/MinistrySafe/Assets/Lava/MinistrySafeTabs.lava' %}", Guid.NewGuid().ToString() );
         }
 
+        /// <summary>
+        /// Updates the ministry safe page.
+        /// </summary>
         private void UpdateMinistrySafePage()
         {
             RockMigrationHelper.AddOrUpdateEntityAttribute( "com.bemaservices.MinistrySafe.MinistrySafe", Rock.SystemGuid.FieldType.ENCRYPTED_TEXT, "", "", "Access Token", "", "MinistrySafe Access Token", 0, "", "d582affe-7331-43c6-a006-95c291db4bad","AccessToken" );
@@ -744,6 +786,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.UpdateHtmlContentBlock( "E7759BE5-B196-41D2-B2FA-D5C062BE6F9D", "{% include '~/Plugins/com_bemaservices/MinistrySafe/Assets/Lava/MinistrySafeTabs.lava' %}", Guid.NewGuid().ToString() );
         }
 
+        /// <summary>
+        /// Updates the terminology.
+        /// </summary>
         private void UpdateTerminology()
         {
             // Page: MinistrySafe
@@ -796,6 +841,14 @@ namespace com.bemaservices.MinistrySafe.Migrations
 
         }
 
+        /// <summary>
+        /// Updates the badge.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="description">The description.</param>
+        /// <param name="entityTypeName">Name of the entity type.</param>
+        /// <param name="order">The order.</param>
+        /// <param name="guid">The unique identifier.</param>
         public void UpdateBadge( string name, string description, string entityTypeName, int order, string guid )
         {
             Sql( string.Format( @"
@@ -825,6 +878,12 @@ namespace com.bemaservices.MinistrySafe.Migrations
             );
         }
 
+        /// <summary>
+        /// Adds the badge attribute value.
+        /// </summary>
+        /// <param name="personBadgeGuid">The person badge unique identifier.</param>
+        /// <param name="attributeGuid">The attribute unique identifier.</param>
+        /// <param name="value">The value.</param>
         public void AddBadgeAttributeValue( string personBadgeGuid, string attributeGuid, string value )
         {
             Sql( string.Format( @"
@@ -852,6 +911,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             );
         }
 
+        /// <summary>
+        /// The commands to undo a migration from a specific version
+        /// </summary>
         public override void Down()
         {
         }

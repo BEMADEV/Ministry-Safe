@@ -1,5 +1,5 @@
 ﻿// <copyright>
-// Copyright by the Spark Development Network
+// Copyright by BEMA Software Services
 //
 // Licensed under the Rock Community License (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,21 +26,45 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
     /// <seealso cref="com.bemaservices.MinistrySafe.MinistrySafeApi.TrainingWebhook" />
     internal class TrainingWebhook
     {
+        /// <summary>
+        /// Gets or sets the user identifier.
+        /// </summary>
+        /// <value>The user identifier.</value>
         [JsonProperty( "user_id" )]
         public string UserId { get; set; }
 
+        /// <summary>
+        /// Gets or sets the external identifier.
+        /// </summary>
+        /// <value>The external identifier.</value>
         [JsonProperty( "external_id" )]
         public string ExternalId { get; set; }
 
+        /// <summary>
+        /// Gets or sets the score.
+        /// </summary>
+        /// <value>The score.</value>
         [JsonProperty( "score" )]
         public int? Score { get; set; }
 
+        /// <summary>
+        /// Gets or sets the complete date time.
+        /// </summary>
+        /// <value>The complete date time.</value>
         [JsonProperty( "complete_date" )]
         public DateTime CompleteDateTime { get; set; }
 
+        /// <summary>
+        /// Gets or sets the survey code.
+        /// </summary>
+        /// <value>The survey code.</value>
         [JsonProperty( "survey_code" )]
         public string SurveyCode { get; set; }
 
+        /// <summary>
+        /// Gets or sets the certificate URL.
+        /// </summary>
+        /// <value>The certificate URL.</value>
         [JsonProperty( "certificate_url" )]
         public string CertificateUrl { get; set; }
     }
