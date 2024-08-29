@@ -28,7 +28,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
     /// Implements the <see cref="Migration" />
     /// </summary>
     /// <seealso cref="Migration" />
-    [MigrationNumber( 11, "1.14.0" )]
+    [MigrationNumber( 12, "1.14.0" )]
     public partial class RequestLauncher : Migration
     {
         /// <summary>

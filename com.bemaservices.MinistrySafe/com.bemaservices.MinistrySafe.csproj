@@ -81,7 +81,8 @@
     <Compile Include="Constants\MinistrySafeSystemGuid.cs" />
     <Compile Include="Jobs\ImportBackgroundChecks.cs" />
     <Compile Include="Jobs\ImportTrainings.cs" />
-    <Compile Include="Migrations\011_RequestLauncher.cs" />
+    <Compile Include="Migrations\011_FluidFixes.cs" />
+    <Compile Include="Migrations\012_RequestLauncher.cs" />
     <Compile Include="Migrations\010_AdditionalTrainingTypes.cs" />
     <Compile Include="Migrations\008_TrainingWorkflowUpdates.cs" />
     <Compile Include="Migrations\007_BackgroundChecks.cs" />
