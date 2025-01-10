@@ -41,8 +41,20 @@ namespace com.bemaservices.MinistrySafe
     [Export( typeof( BackgroundCheckComponent ) )]
     [ExportMetadata( "ComponentName", "MinistrySafe" )]
 
-    [EncryptedTextField( "Access Token", "MinistrySafe Access Token", true, "", "", 0, null, true )]
-    [BooleanField( "Is Staging", "Is Staging Environment", false, "", 0, "IsStaging" )]
+    [EncryptedTextField( "Access Token",
+        Description = "MinistrySafe Access Token",
+        Key = MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN,
+        IsRequired = true,
+        DefaultValue = "",
+        Order = 0,
+        IsPassword = true )]
+    [TextField( "MinistrySafe Server Url",
+        Description = "MinistrySafe Access Token",
+        Key = MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL,
+        IsRequired = true,
+        DefaultValue = "https://safetysystem.abusepreventionsystems.com/api/",
+        Order = 1)]
+
     public class MinistrySafe : BackgroundCheckComponent
     {
         #region Private Fields

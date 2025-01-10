@@ -42,9 +42,6 @@ namespace com.bemaservices.MinistrySafe.Constants
         /// </summary>
         public const string MINISTRYSAFE_STAGING_APISERVER = "https://staging.ministrysafe.com/api/";
 
-        /// <summary>
-        /// The candidates URL
-        /// </summary>
         public const string MINISTRYSAFE_USERS_URL = "v2/users";
 
         /// <summary>
@@ -57,19 +54,14 @@ namespace com.bemaservices.MinistrySafe.Constants
         /// </summary>
         public const string MINISTRYSAFE_TAGS_URL = "v2/tags";
 
-        /// <summary>
-        /// The ministrysafe tags URL
-        /// </summary>
         public const string MINISTRYSAFE_TRAININGS_URL = "v2/trainings";
 
-        /// <summary>
-        /// The report URL
-        /// </summary>
         public const string MINISTRYSAFE_BACKGROUNDCHECK_URL = "v2/background_checks";
 
-        /// <summary>
-        /// The default checkr workflow type name
-        /// </summary>
         public const string MINISTRYSAFE_WORKFLOW_TYPE_NAME = "MinistrySafe Safe Training";
+
+        public const string MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN = "AccessToken";
+
+        public const string MINISTRYSAFE_ATTRIBUTE_SERVER_URL = "MinistrySafeServerUrl";
     }
 }

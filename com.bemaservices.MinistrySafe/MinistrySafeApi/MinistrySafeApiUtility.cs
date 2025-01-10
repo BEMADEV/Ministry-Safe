@@ -85,14 +85,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         private static RestClient RestClient()
         {
             string token = null;
-            bool isStaging = false;
+            string serverUrl = null;
             using ( RockContext rockContext = new RockContext() )
             {
                 var settings = GetSettings( rockContext );
                 if ( settings != null )
                 {
-                    token = GetSettingValue( settings, "AccessToken", true );
-                    isStaging = GetSettingValue( settings, "IsStaging", false ).AsBoolean();
+                    token = GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
+                    serverUrl = GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
                 }
             }
 
@@ -101,7 +101,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 token = GlobalAttributesCache.Value( "MinistrySafeAPIToken" );
             }
 
-            var serverLink = isStaging ? MinistrySafeConstants.MINISTRYSAFE_STAGING_APISERVER : MinistrySafeConstants.MINISTRYSAFE_APISERVER;
+            var serverLink = serverUrl.IsNullOrWhiteSpace() ? serverUrl : MinistrySafeConstants.MINISTRYSAFE_APISERVER;
             var restClient = new RestClient( serverLink );
 
             restClient.AddDefaultHeader( "Authorization", string.Format( "Token token={0}", token ) );
