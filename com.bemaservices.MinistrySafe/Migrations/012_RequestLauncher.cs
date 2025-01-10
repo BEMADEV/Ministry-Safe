@@ -45,6 +45,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
             SetBackgroundCheckVisibility();
         }
 
+        /// <summary>
+        /// Sets the background check visibility.
+        /// </summary>
         private void SetBackgroundCheckVisibility()
         {
             Sql( @"
@@ -58,6 +61,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
 " );
         }
 
+        /// <summary>
+        /// Adds the person attribute.
+        /// </summary>
         private void AddPersonAttribute()
         {
             RockMigrationHelper.UpdatePersonAttribute( "59D5A94C-94A0-4630-B80A-BB25697D74C7"
@@ -75,6 +81,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
                 , "BE52FF10-032D-4FF8-9FB6-2AD646E73377" );
         }
 
+        /// <summary>
+        /// Adds the type of the status defined.
+        /// </summary>
         private void AddStatusDefinedType()
         {
             RockMigrationHelper.AddDefinedType( "Global", "MinistrySafe Background Check Statuses", "", "A19A48A7-8EC9-4FAC-8433-B9346C790175", @"" );
