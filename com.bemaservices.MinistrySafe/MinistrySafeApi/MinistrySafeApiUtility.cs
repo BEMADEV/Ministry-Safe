@@ -101,7 +101,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 token = GlobalAttributesCache.Value( "MinistrySafeAPIToken" );
             }
 
-            var serverLink = serverUrl.IsNullOrWhiteSpace() ? serverUrl : MinistrySafeConstants.MINISTRYSAFE_APISERVER;
+            var serverLink = serverUrl.IsNullOrWhiteSpace() ? MinistrySafeConstants.MINISTRYSAFE_APISERVER : serverUrl;
             var restClient = new RestClient( serverLink );
 
             restClient.AddDefaultHeader( "Authorization", string.Format( "Token token={0}", token ) );

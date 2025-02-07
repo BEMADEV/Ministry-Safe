@@ -24,7 +24,7 @@
                                 </div>
                                 <div class="col-md-5 col-md-offset-1 col-sm-6">
                                     <Rock:RockTextBox ID="tbAccessToken" runat="server" Label="MinistrySafe API Token" Required="true" RequiredErrorMessage="A MinistrySafe API Token is Required" Help="The MinistrySafe Access Token is generated when a MinistrySafe Account is created on the Rock website." />
-                                    <Rock:RockCheckBox ID="cbIsStaging" runat="server" Label="Is Staging Environment" Help="Are you using a staging environment?" />
+                                    <Rock:RockTextBox ID="tbServerUrl" runat="server" Label="MinistrySafe API Server Url" Required="true" RequiredErrorMessage="A MinistrySafe API Server Url is Required" Help="This is generally https://safetysystem.abusepreventionsystems.com/api/ for production environments, and https://staging.ministrysafe.com/api/ in staging environments." />
                                     <div class="actions">
                                         <asp:LinkButton ID="btnSave" runat="server" CssClass="btn btn-primary" OnClick="btnSave_Click">Save</asp:LinkButton>
                                     </div>

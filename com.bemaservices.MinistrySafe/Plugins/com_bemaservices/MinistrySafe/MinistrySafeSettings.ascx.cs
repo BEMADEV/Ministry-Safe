@@ -91,8 +91,8 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
             using ( var rockContext = new RockContext() )
             {
                 var settings = GetSettings( rockContext );
-                SetSettingValue( rockContext, settings, "AccessToken", tbAccessToken.Text, true );
-                SetSettingValue( rockContext, settings, "IsStaging", cbIsStaging.Checked.ToTrueFalse().ToLower(), false );
+                SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, tbAccessToken.Text, true );
+                SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, tbServerUrl.Text, false );
 
                 rockContext.SaveChanges();
 
@@ -302,30 +302,38 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         private void ShowDetail()
         {
             string accessToken = null;
-            bool isStaging = false;
+            string serverUrl = null;
             using ( RockContext rockContext = new RockContext() )
             {
                 var settings = GetSettings( rockContext );
                 if ( settings != null )
                 {
-                    accessToken = GetSettingValue( settings, "AccessToken", true );
-                    isStaging = GetSettingValue( settings, "IsStaging", false ).AsBoolean();
+                    accessToken = GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
+                    serverUrl = GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
 
                     if ( accessToken.IsNullOrWhiteSpace() )
                     {
                         string token = GlobalAttributesCache.Value( "MinistrySafeAPIToken" );
                         if ( token.IsNotNullOrWhiteSpace() )
                         {
-                            SetSettingValue( rockContext, settings, "AccessToken", token, true );
+                            SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, token, true );
                             rockContext.SaveChanges();
                             BackgroundCheckContainer.Instance.Refresh();
-                            accessToken = GetSettingValue( settings, "AccessToken", true );
+                            accessToken = GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
                         }
+                    }
+
+                    if ( serverUrl.IsNullOrWhiteSpace() )
+                    {
+                        serverUrl = MinistrySafeConstants.MINISTRYSAFE_APISERVER;
                     }
                 }
             }
 
-            if ( accessToken.IsNullOrWhiteSpace() )
+            tbAccessToken.Text = accessToken;
+            tbServerUrl.Text = serverUrl;
+
+            if ( accessToken.IsNullOrWhiteSpace() || serverUrl.IsNullOrWhiteSpace() )
             {
                 btnDefault.Visible = false;
                 pnlToken.Visible = true;
@@ -344,12 +352,9 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                 }
 
                 pnlPackages.Enabled = true;
-
-                tbAccessToken.Text = accessToken;
-                cbIsStaging.Checked = isStaging;
                 lViewColumnLeft.Text = new DescriptionList()
                     .Add( "Access Token", accessToken )
-                    .Add( "Is Staging Environment", isStaging.ToYesNo() )
+                    .Add( "Server Url", serverUrl )
                     .Html;
                 DisplayPackages();
                 DisplayTags();

@@ -52,7 +52,7 @@ namespace com.bemaservices.MinistrySafe
         Description = "MinistrySafe Access Token",
         Key = MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL,
         IsRequired = true,
-        DefaultValue = "https://safetysystem.abusepreventionsystems.com/api/",
+        DefaultValue = MinistrySafeConstants.MINISTRYSAFE_APISERVER,
         Order = 1)]
 
     public class MinistrySafe : BackgroundCheckComponent
