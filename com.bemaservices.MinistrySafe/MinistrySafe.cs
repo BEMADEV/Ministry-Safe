@@ -97,6 +97,7 @@ namespace com.bemaservices.MinistrySafe
                 {
                     errorMessages.Add( "The 'MinistrySafe' background check provider requires a valid workflow." );
                     UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                    UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                     return true;
                 }
 
@@ -110,6 +111,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to get Person." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -121,6 +123,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to get Package." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -129,6 +132,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to determine whether the role is Child-Serving." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -137,6 +141,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to determine whether the applicant is over 13." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -145,6 +150,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to determine the Applicant's salary range." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -160,6 +166,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to create user." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -168,6 +175,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to create background check." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -216,6 +224,7 @@ namespace com.bemaservices.MinistrySafe
                 ExceptionLogService.LogException( ex, null );
                 errorMessages.Add( ex.Message );
                 UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                 return true;
             }
         }
@@ -588,6 +597,21 @@ namespace com.bemaservices.MinistrySafe
         private void UpdateWorkflowRequestStatus( Rock.Model.Workflow workflow, RockContext rockContext, string requestStatus )
         {
             if ( SaveAttributeValue( workflow, "RequestStatus", requestStatus,
+                FieldTypeCache.Get( Rock.SystemGuid.FieldType.TEXT.AsGuid() ), rockContext, null ) )
+            {
+                rockContext.SaveChanges();
+            }
+        }
+
+        /// <summary>
+        /// Sets the workflow RequestMessage attribute.
+        /// </summary>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="requestStatus">The request message.</param>
+        private void UpdateWorkflowRequestMessage( Rock.Model.Workflow workflow, RockContext rockContext, string requestMessage )
+        {
+            if ( SaveAttributeValue( workflow, "RequestMessage", requestMessage,
                 FieldTypeCache.Get( Rock.SystemGuid.FieldType.TEXT.AsGuid() ), rockContext, null ) )
             {
                 rockContext.SaveChanges();
