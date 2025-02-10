@@ -19,6 +19,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
+using System.Data.Entity;
 using System.Linq;
 using com.bemaservices.MinistrySafe.Constants;
 using com.bemaservices.MinistrySafe.MinistrySafeApi;
@@ -53,7 +54,7 @@ namespace com.bemaservices.MinistrySafe
         Key = MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL,
         IsRequired = true,
         DefaultValue = MinistrySafeConstants.MINISTRYSAFE_APISERVER,
-        Order = 1)]
+        Order = 1 )]
 
     public class MinistrySafe : BackgroundCheckComponent
     {
@@ -1045,10 +1046,10 @@ namespace com.bemaservices.MinistrySafe
                 var completionDate = backgroundCheckResponse.CompleteDate.AsDateTime();
                 var orderDate = backgroundCheckResponse.OrderDate.AsDateTime();
 
-                
+
                 backgroundCheck.Status = "archived";
                 backgroundCheck.ResponseId = requestId;
-                backgroundCheck.ResponseDate =  RockDateTime.Now;
+                backgroundCheck.ResponseDate = RockDateTime.Now;
                 if ( resultsUrl.IsNotNullOrWhiteSpace() )
                 {
                     backgroundCheck.ResponseData = resultsUrl;
@@ -1859,8 +1860,106 @@ namespace com.bemaservices.MinistrySafe
         /// </summary>
         /// <param name="postedData">The posted data.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        public static bool SaveWebhookResults( string postedData )
+        public static bool SaveWebhookResults( string postedData, out string responseMessage )
         {
+            responseMessage = string.Empty;
+
+            // Save Interaction storing information
+            using ( var rockContext = new RockContext() )
+            {
+                var channelName = "MinistrySafe";
+                var componentName = "Webhook Data";
+
+                InteractionChannelCache channel = null;
+                // Find by Name
+                int? interactionChannelId = new InteractionChannelService( rockContext )
+                    .Queryable()
+                    .AsNoTracking()
+                    .Where( c => c.Name == channelName )
+                    .Select( c => c.Id )
+                    .Cast<int?>()
+                    .FirstOrDefault();
+
+                if ( interactionChannelId != null )
+                {
+                    channel = InteractionChannelCache.Get( interactionChannelId.Value );
+                }
+                else
+                {
+                    // If still no match, and we have a name, create a new channel
+                    using ( var newRockContext = new RockContext() )
+                    {
+                        Rock.Model.InteractionChannel interactionChannel = new Rock.Model.InteractionChannel();
+                        interactionChannel.Name = channelName;
+                        new InteractionChannelService( newRockContext ).Add( interactionChannel );
+                        newRockContext.SaveChanges();
+                        channel = InteractionChannelCache.Get( interactionChannel.Id );
+                    }
+                }
+
+                if ( channel == null )
+                {
+                    responseMessage = "Interaction Channel could not be found to saved posted data to.";
+                    Rock.Model.ExceptionLogService.LogException( new Exception( responseMessage ), null );
+                    return false;
+                }
+
+                // Get Interaction Component
+                InteractionComponentCache component = null;
+                int? interactionComponentId = new InteractionComponentService( rockContext )
+                    .Queryable()
+                    .AsNoTracking()
+                    .Where( c => c.InteractionChannelId == channel.Id )
+                    .Where( c => c.Name.Equals( componentName, StringComparison.OrdinalIgnoreCase ) )
+                    .Select( c => c.Id )
+                    .Cast<int?>()
+                    .FirstOrDefault();
+
+                if ( interactionComponentId != null )
+                {
+                    component = InteractionComponentCache.Get( interactionComponentId.Value );
+                }
+                else
+                {
+                    // If still no match, and we have a name, create a new channel
+                    using ( var newRockContext = new RockContext() )
+                    {
+                        var interactionComponent = new InteractionComponent();
+                        interactionComponent.Name = componentName;
+                        interactionComponent.InteractionChannelId = channel.Id;
+                        new InteractionComponentService( newRockContext ).Add( interactionComponent );
+                        newRockContext.SaveChanges();
+
+                        component = InteractionComponentCache.Get( interactionComponent.Id );
+                    }
+                }
+
+                if ( component == null )
+                {
+                    responseMessage = "Interaction Component could not be found to saved posted data to.";
+                    Rock.Model.ExceptionLogService.LogException( new Exception( responseMessage ), null );
+                    return false;
+                }
+
+                // Write the interaction record
+                var interaction = new InteractionService( rockContext )
+                    .AddInteraction(
+                    interactionComponentId: component.Id,
+                    entityId: null, 
+                    operation: "Data Posted",
+                    interactionData: postedData, 
+                    personAliasId: null, 
+                    dateTime: RockDateTime.Now, 
+                    deviceApplication: null, 
+                    deviceOs: null, 
+                    deviceClientType: null, 
+                    deviceTypeData: null, 
+                    ipAddress: null, 
+                    browserSessionId: null );
+                rockContext.SaveChanges();
+            }
+
+            // Try casting as Training
             TrainingWebhook trainingWebhook = JsonConvert.DeserializeObject<TrainingWebhook>( postedData, new JsonSerializerSettings()
             {
                 Error = ( sender, errorEventArgs ) =>
@@ -1870,28 +1969,32 @@ namespace com.bemaservices.MinistrySafe
                 }
             } );
 
-            if ( trainingWebhook.CertificateUrl == null )
+            if ( trainingWebhook.CertificateUrl != null )
             {
-                BackgroundCheckWebhook backgroundCheckWebhook = JsonConvert.DeserializeObject<BackgroundCheckWebhook>( postedData, new JsonSerializerSettings()
-                {
-                    Error = ( sender, errorEventArgs ) =>
-                    {
-                        errorEventArgs.ErrorContext.Handled = true;
-                        Rock.Model.ExceptionLogService.LogException( new Exception( errorEventArgs.ErrorContext.Error.Message ), null );
-                    }
-                } );
+                responseMessage = "Valid Training Data Received";
+                return UpdateTrainingFromWebhook( trainingWebhook );
+            }
 
-                if ( backgroundCheckWebhook == null )
+            // Try casting as Background Check
+            BackgroundCheckWebhook backgroundCheckWebhook = JsonConvert.DeserializeObject<BackgroundCheckWebhook>( postedData, new JsonSerializerSettings()
+            {
+                Error = ( sender, errorEventArgs ) =>
                 {
-                    string errorMessage = "Webhook data is not valid: " + postedData;
-                    Rock.Model.ExceptionLogService.LogException( new Exception( errorMessage ), null );
-                    return false;
+                    errorEventArgs.ErrorContext.Handled = true;
+                    Rock.Model.ExceptionLogService.LogException( new Exception( errorEventArgs.ErrorContext.Error.Message ), null );
                 }
+            } );
 
+            if ( backgroundCheckWebhook != null )
+            {
+                responseMessage = "Valid Background Check Data Received";
                 return UpdateBackgroundCheckAndWorkFlow( backgroundCheckWebhook );
             }
 
-            return UpdateTrainingFromWebhook( trainingWebhook );
+            // Return Invalid Data
+            responseMessage = "Webhook data is not valid: " + postedData;
+            Rock.Model.ExceptionLogService.LogException( new Exception( responseMessage ), null );
+            return false;
         }
 
         /// <summary>
