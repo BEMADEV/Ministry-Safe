@@ -647,9 +647,7 @@ namespace com.bemaservices.MinistrySafe
                     string packageName = packageResponse.Name;
                     if ( !packages.ContainsKey( packageName ) )
                     {
-
                         AddPackage( rockContext, definedType, definedValueService, packageResponse, null );
-
                     }
 
                     packageResponseList.Add( packageResponse );
@@ -758,15 +756,13 @@ namespace com.bemaservices.MinistrySafe
             }
 
             DefinedValueCache userTypeDefinedValue = DefinedValueCache.Get( pkgTypeDefinedValue.GetAttributeValue( "MinistrySafeUserType" ).AsGuid() );
-            if ( userTypeDefinedValue == null )
+            if ( userTypeDefinedValue != null )
             {
-                errorMessages.Add( "The 'MinistrySafe' background check type does not have an associated user type." );
-                return false;
+                userType = userTypeDefinedValue.Value;
             }
 
             level = pkgTypeDefinedValue.GetAttributeValue( "MinistrySafePackageLevel" );
             packageCode = pkgTypeDefinedValue.GetAttributeValue( "MinistrySafePackageCode" );
-            userType = userTypeDefinedValue.Value;
             packageName = pkgTypeDefinedValue.Value;
             return true;
         }
