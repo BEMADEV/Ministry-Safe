@@ -20,7 +20,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.Data.Entity;
+using System.IO;
 using System.Linq;
+using System.Net;
 using com.bemaservices.MinistrySafe.Constants;
 using com.bemaservices.MinistrySafe.MinistrySafeApi;
 using com.bemaservices.MinistrySafe.Model;
@@ -237,7 +239,7 @@ namespace com.bemaservices.MinistrySafe
         /// <returns>System.String.</returns>
         public override string GetReportUrl( string backgroundCheckId )
         {
-            var isAuthorized = this.IsAuthorized( Authorization.VIEW, this.GetCurrentPerson() );
+            var isAuthorized = this.IsAuthorized( Rock.Security.Authorization.VIEW, this.GetCurrentPerson() );
 
             if ( isAuthorized )
             {
@@ -269,7 +271,7 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="reportStatus">The report status.</param>
         /// <param name="rockContext">The rock context.</param>
         /// <param name="personAliasId">The person alias identifier.</param>
-        private static void UpdateBackgroundCheckWorkflow( int id, string recommendation, string documentId, string reportStatus, RockContext rockContext, int? personAliasId = null )//, string customPackageCode = null, int? level = null, string userType = null )
+        private static void UpdateBackgroundCheckWorkflow( int id, string recommendation, string documentId, string reportStatus, RockContext rockContext, int? personAliasId = null, string resultsUrl = null )//, string customPackageCode = null, int? level = null, string userType = null )
         {
             // Make sure the workflow isn't locked (i.e., it's still being worked on by the 'SendRequest' method of the workflow
             // BackgroundCheckComponent) before we start working on it -- especially before we load the workflow's attributes.
@@ -330,6 +332,7 @@ namespace com.bemaservices.MinistrySafe
                             workflow.MarkComplete( recommendation );
                         }
                     }
+
                     // Save the report link
                     if ( documentId.IsNotNullOrWhiteSpace() )
                     {
@@ -338,6 +341,18 @@ namespace com.bemaservices.MinistrySafe
                             FieldTypeCache.Get( Rock.SystemGuid.FieldType.TEXT.AsGuid() ), rockContext,
                             new Dictionary<string, string> { { "ispassword", "false" } } ) )
                         {
+                        }
+
+                        if ( workflow.Attributes.ContainsKey( "ReportFile" ) && resultsUrl.IsNotNullOrWhiteSpace() )
+                        {
+                            var attributeCache = workflow.Attributes["ReportFile"];
+                            // Save the report
+                            Guid? binaryFileGuid = null;
+                            binaryFileGuid = SaveFile( attributeCache, resultsUrl, workflow.Id.ToString() + ".pdf" );
+                            if ( binaryFileGuid.HasValue )
+                            {
+                                workflow.SetAttributeValue( attributeCache.Key, binaryFileGuid.Value.ToString() );
+                            }
                         }
                     }
 
@@ -415,6 +430,50 @@ namespace com.bemaservices.MinistrySafe
                 workflowService.Process( workflow, out workflowErrors );
                 _lockObjects.TryRemove( id, out _ ); // we no longer need that lock for this workflow
             }
+        }
+
+        private static Guid? SaveFile( AttributeCache binaryFileAttribute, string url, string fileName )
+        {
+            // get BinaryFileType info
+            if ( binaryFileAttribute != null &&
+                binaryFileAttribute.QualifierValues != null &&
+                binaryFileAttribute.QualifierValues.ContainsKey( "binaryFileType" ) )
+            {
+                Guid? fileTypeGuid = binaryFileAttribute.QualifierValues["binaryFileType"].Value.AsGuidOrNull();
+                if ( fileTypeGuid.HasValue )
+                {
+                    RockContext rockContext = new RockContext();
+                    BinaryFileType binaryFileType = new BinaryFileTypeService( rockContext ).Get( fileTypeGuid.Value );
+
+                    if ( binaryFileType != null )
+                    {
+                        byte[] data = null;
+
+                        using ( WebClient wc = new WebClient() )
+                        {
+                            data = wc.DownloadData( url );
+                        }
+
+                        BinaryFile binaryFile = new BinaryFile();
+                        binaryFile.Guid = Guid.NewGuid();
+                        binaryFile.IsTemporary = true;
+                        binaryFile.BinaryFileTypeId = binaryFileType.Id;
+                        binaryFile.MimeType = "application/pdf";
+                        binaryFile.FileName = fileName;
+                        binaryFile.FileSize = data.Length;
+                        binaryFile.ContentStream = new MemoryStream( data );
+
+                        var binaryFileService = new BinaryFileService( rockContext );
+                        binaryFileService.Add( binaryFile );
+
+                        rockContext.SaveChanges();
+
+                        return binaryFile.Guid;
+                    }
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -576,7 +635,7 @@ namespace com.bemaservices.MinistrySafe
 
                     if ( backgroundCheck.WorkflowId.HasValue && backgroundCheck.WorkflowId > 0 )
                     {
-                        UpdateBackgroundCheckWorkflow( backgroundCheck.WorkflowId.Value, recommendation, backgroundCheck.ResponseId, reportStatus, rockContext, backgroundCheck.PersonAliasId );//, customPackageCode, level, userType );
+                        UpdateBackgroundCheckWorkflow( backgroundCheck.WorkflowId.Value, recommendation, backgroundCheck.ResponseId, reportStatus, rockContext, backgroundCheck.PersonAliasId, resultsUrl );//, customPackageCode, level, userType );
                     }
                 }
 
@@ -1965,16 +2024,16 @@ namespace com.bemaservices.MinistrySafe
                 var interaction = new InteractionService( rockContext )
                     .AddInteraction(
                     interactionComponentId: component.Id,
-                    entityId: null, 
+                    entityId: null,
                     operation: "Data Posted",
-                    interactionData: postedData, 
-                    personAliasId: null, 
-                    dateTime: RockDateTime.Now, 
-                    deviceApplication: null, 
-                    deviceOs: null, 
-                    deviceClientType: null, 
-                    deviceTypeData: null, 
-                    ipAddress: null, 
+                    interactionData: postedData,
+                    personAliasId: null,
+                    dateTime: RockDateTime.Now,
+                    deviceApplication: null,
+                    deviceOs: null,
+                    deviceClientType: null,
+                    deviceTypeData: null,
+                    ipAddress: null,
                     browserSessionId: null );
                 rockContext.SaveChanges();
             }
