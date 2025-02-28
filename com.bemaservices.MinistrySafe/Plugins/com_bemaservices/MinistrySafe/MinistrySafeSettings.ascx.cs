@@ -21,6 +21,7 @@ using System.Linq;
 using System.Web.UI;
 
 using Rock;
+using com.bemaservices.MinistrySafe;
 using com.bemaservices.MinistrySafe.Constants;
 using Rock.Data;
 using Rock.Migrations;
@@ -90,9 +91,10 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         {
             using ( var rockContext = new RockContext() )
             {
-                var settings = GetSettings( rockContext );
-                SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, tbAccessToken.Text, true );
-                SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, tbServerUrl.Text, false );
+                var settings = com.bemaservices.MinistrySafe.MinistrySafe.GetSettings( rockContext );
+                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, tbAccessToken.Text, true );
+                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, tbServerUrl.Text, false );
+                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, cbEnableDebugging.Checked.ToString(), false );
 
                 rockContext.SaveChanges();
 
@@ -105,6 +107,8 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
             }
 
             btnUpdateTags_Click( null, null );
+
+            btnUpdateSurveyTypes_Click( null, null );
 
             pnlToken.Visible = false;
             pnlPackages.Visible = true;
@@ -134,6 +138,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
 
             DisplayPackages();
             DisplayTags();
+            DisplaySurveyTypes();
             if ( sender != null )
             {
                 maUpdated.Show( "Update Packages Complete.", ModalAlertType.Information );
@@ -155,6 +160,27 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
             }
 
             DisplayTags();
+            if ( sender != null )
+            {
+                maUpdated.Show( "Update Tags Complete.", ModalAlertType.Information );
+            }
+        }
+        protected void btnUpdateSurveyTypes_Click( object sender, EventArgs e )
+        {
+            nbNotification.Visible = false;
+
+            List<string> errorMessages = new List<string>();
+            if ( !com.bemaservices.MinistrySafe.MinistrySafe.UpdateSurveyTypes( errorMessages ) )
+            {
+                nbNotification.Text = "<p>" + errorMessages.AsDelimited( "</p><p>" ) + "</p>";
+                nbNotification.Visible = true;
+                foreach ( string errorMessage in errorMessages )
+                {
+                    ExceptionLogService.LogException( new Exception( errorMessage ), null );
+                }
+            }
+
+            DisplaySurveyTypes();
             if ( sender != null )
             {
                 maUpdated.Show( "Update Tags Complete.", ModalAlertType.Information );
@@ -283,6 +309,20 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
             }
         }
 
+        private void DisplaySurveyTypes()
+        {
+            using ( var rockContext = new RockContext() )
+            {
+                var surveyTypes = new DefinedValueService( rockContext )
+                    .GetByDefinedTypeGuid( MinistrySafeSystemGuid.MINISTRYSAFE_SURVEY_TYPES.AsGuid() )
+                    .Where( v => v.IsActive )
+                    .Select( v => v.Value )
+                    .ToList();
+
+                lSurveyTypes.Text = surveyTypes.AsDelimited( "<br/>" );
+            }
+        }
+
         /// <summary>
         /// Determines whether Checkr is the default provider.
         /// </summary>
@@ -303,23 +343,25 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         {
             string accessToken = null;
             string serverUrl = null;
+            bool enableDebugging = false;
             using ( RockContext rockContext = new RockContext() )
             {
-                var settings = GetSettings( rockContext );
+                var settings = com.bemaservices.MinistrySafe.MinistrySafe.GetSettings( rockContext );
                 if ( settings != null )
                 {
-                    accessToken = GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
-                    serverUrl = GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
+                    accessToken = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
+                    serverUrl = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
+                    enableDebugging = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, false ).AsBoolean();
 
                     if ( accessToken.IsNullOrWhiteSpace() )
                     {
                         string token = GlobalAttributesCache.Value( "MinistrySafeAPIToken" );
                         if ( token.IsNotNullOrWhiteSpace() )
                         {
-                            SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, token, true );
+                            com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, token, true );
                             rockContext.SaveChanges();
                             BackgroundCheckContainer.Instance.Refresh();
-                            accessToken = GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
+                            accessToken = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
                         }
                     }
 
@@ -332,6 +374,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
 
             tbAccessToken.Text = accessToken;
             tbServerUrl.Text = serverUrl;
+            cbEnableDebugging.Checked = enableDebugging;
 
             if ( accessToken.IsNullOrWhiteSpace() || serverUrl.IsNullOrWhiteSpace() )
             {
@@ -355,98 +398,11 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                 lViewColumnLeft.Text = new DescriptionList()
                     .Add( "Access Token", accessToken )
                     .Add( "Server Url", serverUrl )
+                    .Add( "Enable Debugging?", enableDebugging )
                     .Html;
                 DisplayPackages();
                 DisplayTags();
-            }
-        }
-
-        /// <summary>
-        /// Gets the settings.
-        /// </summary>
-        /// <param name="rockContext">The rock context.</param>
-        /// <returns></returns>
-        private List<AttributeValue> GetSettings( RockContext rockContext )
-        {
-            var ministrySafeEntityType = EntityTypeCache.Get( typeof( com.bemaservices.MinistrySafe.MinistrySafe ) );
-            if ( ministrySafeEntityType != null )
-            {
-                var service = new AttributeValueService( rockContext );
-                return service.Queryable( "Attribute" )
-                    .Where( v => v.Attribute.EntityTypeId == ministrySafeEntityType.Id )
-                    .ToList();
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Gets the setting value.
-        /// </summary>
-        /// <param name="values">The values.</param>
-        /// <param name="key">The key.</param>
-        /// <returns></returns>
-        private string GetSettingValue( List<AttributeValue> values, string key, bool encryptedValue = false )
-        {
-            string value = values
-                .Where( v => v.AttributeKey == key )
-                .Select( v => v.Value )
-                .FirstOrDefault();
-            if ( encryptedValue && !string.IsNullOrWhiteSpace( value ) )
-            {
-                try
-                { value = Encryption.DecryptString( value ); }
-                catch { }
-            }
-
-            return value;
-        }
-
-        /// <summary>
-        /// Sets the setting value.
-        /// </summary>
-        /// <param name="rockContext">The rock context.</param>
-        /// <param name="values">The values.</param>
-        /// <param name="key">The key.</param>
-        /// <param name="value">The value.</param>
-        private void SetSettingValue( RockContext rockContext, List<AttributeValue> values, string key, string value, bool encryptValue = false )
-        {
-            if ( encryptValue && !string.IsNullOrWhiteSpace( value ) )
-            {
-                try
-                { value = Encryption.EncryptString( value ); }
-                catch { }
-            }
-
-            var attributeValue = values
-                .Where( v => v.AttributeKey == key )
-                .FirstOrDefault();
-            if ( attributeValue != null )
-            {
-                attributeValue.Value = value;
-            }
-            else
-            {
-                var ministrySafeEntityType = EntityTypeCache.Get( typeof( com.bemaservices.MinistrySafe.MinistrySafe ) );
-                if ( ministrySafeEntityType != null )
-                {
-                    var attribute = new AttributeService( rockContext )
-                        .Queryable()
-                        .Where( a =>
-                            a.EntityTypeId == ministrySafeEntityType.Id &&
-                            a.Key == key
-                        )
-                        .FirstOrDefault();
-
-                    if ( attribute != null )
-                    {
-                        attributeValue = new AttributeValue();
-                        new AttributeValueService( rockContext ).Add( attributeValue );
-                        attributeValue.AttributeId = attribute.Id;
-                        attributeValue.Value = value;
-                        attributeValue.EntityId = 0;
-                    }
-                }
+                DisplaySurveyTypes();
             }
         }
 

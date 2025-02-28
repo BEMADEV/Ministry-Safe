@@ -58,6 +58,11 @@ namespace com.bemaservices.MinistrySafe.Constants
         public const string MINISTRYSAFE_TAGS_URL = "v2/tags";
 
         /// <summary>
+        /// The ministrysafe tags URL
+        /// </summary>
+        public const string MINISTRYSAFE_SURVEY_TYPES_URL = "v2/survey_types";
+
+        /// <summary>
         /// The ministrysafe trainings URL
         /// </summary>
         public const string MINISTRYSAFE_TRAININGS_URL = "v2/trainings";
@@ -76,6 +81,11 @@ namespace com.bemaservices.MinistrySafe.Constants
         /// The ministrysafe attribute access token
         /// </summary>
         public const string MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN = "AccessToken";
+
+        /// <summary>
+        /// The ministrysafe attribute access token
+        /// </summary>
+        public const string MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING = "EnableDebugging";
 
         /// <summary>
         /// The ministrysafe attribute server URL

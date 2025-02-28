@@ -57,6 +57,12 @@ namespace com.bemaservices.MinistrySafe
         IsRequired = true,
         DefaultValue = MinistrySafeConstants.MINISTRYSAFE_APISERVER,
         Order = 1 )]
+    [BooleanField( "Enable Debugging?",
+        Key = MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING,
+        IsRequired = true,
+        DefaultBooleanValue = false,
+        Order = 2
+        )]
 
     public class MinistrySafe : BackgroundCheckComponent
     {
@@ -492,9 +498,10 @@ namespace com.bemaservices.MinistrySafe
             var status = backgroundCheckWebhook.Status;
             var completionDate = backgroundCheckWebhook.CompleteDate.AsDateTime();
             var orderDate = backgroundCheckWebhook.OrderDate.AsDateTime();
+            var tazworkFlagged = backgroundCheckWebhook.TazworkFlagged;
 
 
-            return UpdateBackgroundCheck( requestId, externalId, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate );
+            return UpdateBackgroundCheck( requestId, externalId, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged );
         }
 
         /// <summary>
@@ -511,7 +518,7 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="orderDate">The order date.</param>
         /// <param name="workflowTypeCache">The workflow type cache.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        private static bool UpdateBackgroundCheck( string requestId, string externalId, string resultsUrl, int? userId, int? level, string customPackageCode, string status, DateTime? completionDate, DateTime? orderDate, WorkflowTypeCache workflowTypeCache = null )
+        private static bool UpdateBackgroundCheck( string requestId, string externalId, string resultsUrl, int? userId, int? level, string customPackageCode, string status, DateTime? completionDate, DateTime? orderDate, bool? tazworkFlagged = null, WorkflowTypeCache workflowTypeCache = null )
         {
             try
             {
@@ -553,6 +560,11 @@ namespace com.bemaservices.MinistrySafe
                     if ( backgroundCheck.Status.IsNullOrWhiteSpace() )
                     {
                         backgroundCheck.Status = "consider";
+                    }
+
+                    if ( tazworkFlagged != null && tazworkFlagged != true )
+                    {
+                        backgroundCheck.Status = "clear";
                     }
 
                     backgroundCheck.ResponseId = requestId;
@@ -917,6 +929,78 @@ namespace com.bemaservices.MinistrySafe
         }
 
         /// <summary>
+        /// Updates the survey types.
+        /// </summary>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        public static bool UpdateSurveyTypes( List<string> errorMessages )
+        {
+            List<string> surveyTypeResponseList;
+
+            if ( !MinistrySafeApiUtility.GetSurveyTypes( out surveyTypeResponseList, errorMessages ) )
+            {
+                //return false;
+            }
+
+            if ( surveyTypeResponseList == null )
+            {
+                surveyTypeResponseList = new List<string>();
+            }
+
+            List<DefinedValue> surveyTypes;
+            using ( var rockContext = new RockContext() )
+            {
+                var definedType = DefinedTypeCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_SURVEY_TYPES.AsGuid() );
+
+                DefinedValueService definedValueService = new DefinedValueService( rockContext );
+                surveyTypes = definedValueService
+                    .GetByDefinedTypeGuid( definedType.Guid )
+                    //.Where( v => v.ForeignId == 4 )
+                    .ToList();
+                var surveyTypeNames = surveyTypes.Select( dv => dv.Value ).ToList();
+
+                foreach ( var surveyTypeResponse in surveyTypeResponseList )
+                {
+                    if ( !surveyTypeNames.Contains( surveyTypeResponse ) )
+                    {
+                        DefinedValue definedValue = null;
+
+                        definedValue = new DefinedValue()
+                        {
+                            IsActive = true,
+                            DefinedTypeId = definedType.Id,
+                            ForeignId = 4,
+                            Value = surveyTypeResponse,
+                            Description = surveyTypeResponse
+                        };
+
+                        definedValueService.Add( definedValue );
+
+                        rockContext.SaveChanges();
+                    }
+                }
+
+                foreach ( var surveyType in surveyTypes )
+                {
+                    if ( surveyTypeResponseList.Contains( surveyType.Value ) )
+                    {
+                        surveyType.IsActive = true;
+                        surveyType.ForeignId = 4;
+                    }
+                    else
+                    {
+                        surveyType.IsActive = false;
+                    }
+                }
+
+                rockContext.SaveChanges();
+            }
+
+            DefinedValueCache.Clear();
+            return true;
+        }
+
+        /// <summary>
         /// Gets the child serving.
         /// </summary>
         /// <param name="rockContext">The rock context.</param>
@@ -1065,9 +1149,10 @@ namespace com.bemaservices.MinistrySafe
                         var status = getAllBackgroundCheckResponse.Status;
                         var completionDate = getAllBackgroundCheckResponse.CompleteDate.AsDateTime();
                         var orderDate = getAllBackgroundCheckResponse.OrderDate.AsDateTime();
+                        var tazworkFlagged = getAllBackgroundCheckResponse.TazworkFlagged;
                         if ( completionDate.HasValue || getAllBackgroundCheckResponse.Status == "complete" )
                         {
-                            if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, workflowType ) )
+                            if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged, workflowType ) )
                             {
                                 backgroundChecksProcessed++;
                             }
@@ -1946,96 +2031,104 @@ namespace com.bemaservices.MinistrySafe
             // Save Interaction storing information
             using ( var rockContext = new RockContext() )
             {
-                var channelName = "MinistrySafe";
-                var componentName = "Webhook Data";
-
-                InteractionChannelCache channel = null;
-                // Find by Name
-                int? interactionChannelId = new InteractionChannelService( rockContext )
-                    .Queryable()
-                    .AsNoTracking()
-                    .Where( c => c.Name == channelName )
-                    .Select( c => c.Id )
-                    .Cast<int?>()
-                    .FirstOrDefault();
-
-                if ( interactionChannelId != null )
+                var settings = GetSettings( rockContext );
+                if ( settings != null )
                 {
-                    channel = InteractionChannelCache.Get( interactionChannelId.Value );
-                }
-                else
-                {
-                    // If still no match, and we have a name, create a new channel
-                    using ( var newRockContext = new RockContext() )
+                    var enableDebugging = GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, true ).AsBoolean();
+                    if ( enableDebugging )
                     {
-                        Rock.Model.InteractionChannel interactionChannel = new Rock.Model.InteractionChannel();
-                        interactionChannel.Name = channelName;
-                        new InteractionChannelService( newRockContext ).Add( interactionChannel );
-                        newRockContext.SaveChanges();
-                        channel = InteractionChannelCache.Get( interactionChannel.Id );
+                        var channelName = "MinistrySafe";
+                        var componentName = "Webhook Data";
+
+                        InteractionChannelCache channel = null;
+                        // Find by Name
+                        int? interactionChannelId = new InteractionChannelService( rockContext )
+                            .Queryable()
+                            .AsNoTracking()
+                            .Where( c => c.Name == channelName )
+                            .Select( c => c.Id )
+                            .Cast<int?>()
+                            .FirstOrDefault();
+
+                        if ( interactionChannelId != null )
+                        {
+                            channel = InteractionChannelCache.Get( interactionChannelId.Value );
+                        }
+                        else
+                        {
+                            // If still no match, and we have a name, create a new channel
+                            using ( var newRockContext = new RockContext() )
+                            {
+                                Rock.Model.InteractionChannel interactionChannel = new Rock.Model.InteractionChannel();
+                                interactionChannel.Name = channelName;
+                                new InteractionChannelService( newRockContext ).Add( interactionChannel );
+                                newRockContext.SaveChanges();
+                                channel = InteractionChannelCache.Get( interactionChannel.Id );
+                            }
+                        }
+
+                        if ( channel == null )
+                        {
+                            responseMessage = "Interaction Channel could not be found to saved posted data to.";
+                            Rock.Model.ExceptionLogService.LogException( new Exception( responseMessage ), null );
+                            return false;
+                        }
+
+                        // Get Interaction Component
+                        InteractionComponentCache component = null;
+                        int? interactionComponentId = new InteractionComponentService( rockContext )
+                            .Queryable()
+                            .AsNoTracking()
+                            .Where( c => c.InteractionChannelId == channel.Id )
+                            .Where( c => c.Name.Equals( componentName, StringComparison.OrdinalIgnoreCase ) )
+                            .Select( c => c.Id )
+                            .Cast<int?>()
+                            .FirstOrDefault();
+
+                        if ( interactionComponentId != null )
+                        {
+                            component = InteractionComponentCache.Get( interactionComponentId.Value );
+                        }
+                        else
+                        {
+                            // If still no match, and we have a name, create a new channel
+                            using ( var newRockContext = new RockContext() )
+                            {
+                                var interactionComponent = new InteractionComponent();
+                                interactionComponent.Name = componentName;
+                                interactionComponent.InteractionChannelId = channel.Id;
+                                new InteractionComponentService( newRockContext ).Add( interactionComponent );
+                                newRockContext.SaveChanges();
+
+                                component = InteractionComponentCache.Get( interactionComponent.Id );
+                            }
+                        }
+
+                        if ( component == null )
+                        {
+                            responseMessage = "Interaction Component could not be found to saved posted data to.";
+                            Rock.Model.ExceptionLogService.LogException( new Exception( responseMessage ), null );
+                            return false;
+                        }
+
+                        // Write the interaction record
+                        var interaction = new InteractionService( rockContext )
+                            .AddInteraction(
+                            interactionComponentId: component.Id,
+                            entityId: null,
+                            operation: "Data Posted",
+                            interactionData: postedData,
+                            personAliasId: null,
+                            dateTime: RockDateTime.Now,
+                            deviceApplication: null,
+                            deviceOs: null,
+                            deviceClientType: null,
+                            deviceTypeData: null,
+                            ipAddress: null,
+                            browserSessionId: null );
+                        rockContext.SaveChanges();
                     }
                 }
-
-                if ( channel == null )
-                {
-                    responseMessage = "Interaction Channel could not be found to saved posted data to.";
-                    Rock.Model.ExceptionLogService.LogException( new Exception( responseMessage ), null );
-                    return false;
-                }
-
-                // Get Interaction Component
-                InteractionComponentCache component = null;
-                int? interactionComponentId = new InteractionComponentService( rockContext )
-                    .Queryable()
-                    .AsNoTracking()
-                    .Where( c => c.InteractionChannelId == channel.Id )
-                    .Where( c => c.Name.Equals( componentName, StringComparison.OrdinalIgnoreCase ) )
-                    .Select( c => c.Id )
-                    .Cast<int?>()
-                    .FirstOrDefault();
-
-                if ( interactionComponentId != null )
-                {
-                    component = InteractionComponentCache.Get( interactionComponentId.Value );
-                }
-                else
-                {
-                    // If still no match, and we have a name, create a new channel
-                    using ( var newRockContext = new RockContext() )
-                    {
-                        var interactionComponent = new InteractionComponent();
-                        interactionComponent.Name = componentName;
-                        interactionComponent.InteractionChannelId = channel.Id;
-                        new InteractionComponentService( newRockContext ).Add( interactionComponent );
-                        newRockContext.SaveChanges();
-
-                        component = InteractionComponentCache.Get( interactionComponent.Id );
-                    }
-                }
-
-                if ( component == null )
-                {
-                    responseMessage = "Interaction Component could not be found to saved posted data to.";
-                    Rock.Model.ExceptionLogService.LogException( new Exception( responseMessage ), null );
-                    return false;
-                }
-
-                // Write the interaction record
-                var interaction = new InteractionService( rockContext )
-                    .AddInteraction(
-                    interactionComponentId: component.Id,
-                    entityId: null,
-                    operation: "Data Posted",
-                    interactionData: postedData,
-                    personAliasId: null,
-                    dateTime: RockDateTime.Now,
-                    deviceApplication: null,
-                    deviceOs: null,
-                    deviceClientType: null,
-                    deviceTypeData: null,
-                    ipAddress: null,
-                    browserSessionId: null );
-                rockContext.SaveChanges();
             }
 
             // Try casting as Training
@@ -2185,6 +2278,99 @@ namespace com.bemaservices.MinistrySafe
             tagList = definedValues.Select( dv => dv.Value ).ToList().AsDelimited( "," );
 
             return true;
+        }
+
+
+        /// <summary>
+        /// Gets the settings.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <returns>List&lt;AttributeValue&gt;.</returns>
+        public static List<AttributeValue> GetSettings( RockContext rockContext )
+        {
+            var ministrySafeEntityType = EntityTypeCache.Get( typeof( com.bemaservices.MinistrySafe.MinistrySafe ) );
+            if ( ministrySafeEntityType != null )
+            {
+                var service = new AttributeValueService( rockContext );
+                return service.Queryable( "Attribute" )
+                    .Where( v => v.Attribute.EntityTypeId == ministrySafeEntityType.Id )
+                    .ToList();
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the setting value.
+        /// </summary>
+        /// <param name="values">The values.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="encryptedValue">if set to <c>true</c> [encrypted value].</param>
+        /// <returns>System.String.</returns>
+        public static string GetSettingValue( List<AttributeValue> values, string key, bool encryptedValue = false )
+        {
+            string value = values
+                .Where( v => v.AttributeKey == key )
+                .Select( v => v.Value )
+                .FirstOrDefault();
+            if ( encryptedValue && !string.IsNullOrWhiteSpace( value ) )
+            {
+                try
+                { value = Encryption.DecryptString( value ); }
+                catch { }
+            }
+
+            return value;
+        }
+
+
+
+        /// <summary>
+        /// Sets the setting value.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="values">The values.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="value">The value.</param>
+        public static void SetSettingValue( RockContext rockContext, List<AttributeValue> values, string key, string value, bool encryptValue = false )
+        {
+            if ( encryptValue && !string.IsNullOrWhiteSpace( value ) )
+            {
+                try
+                { value = Encryption.EncryptString( value ); }
+                catch { }
+            }
+
+            var attributeValue = values
+                .Where( v => v.AttributeKey == key )
+                .FirstOrDefault();
+            if ( attributeValue != null )
+            {
+                attributeValue.Value = value;
+            }
+            else
+            {
+                var ministrySafeEntityType = EntityTypeCache.Get( typeof( com.bemaservices.MinistrySafe.MinistrySafe ) );
+                if ( ministrySafeEntityType != null )
+                {
+                    var attribute = new AttributeService( rockContext )
+                        .Queryable()
+                        .Where( a =>
+                            a.EntityTypeId == ministrySafeEntityType.Id &&
+                            a.Key == key
+                        )
+                        .FirstOrDefault();
+
+                    if ( attribute != null )
+                    {
+                        attributeValue = new AttributeValue();
+                        new AttributeValueService( rockContext ).Add( attributeValue );
+                        attributeValue.AttributeId = attribute.Id;
+                        attributeValue.Value = value;
+                        attributeValue.EntityId = 0;
+                    }
+                }
+            }
         }
 
         #endregion

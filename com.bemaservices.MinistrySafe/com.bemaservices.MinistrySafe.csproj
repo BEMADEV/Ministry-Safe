@@ -82,6 +82,7 @@
     <Compile Include="Jobs\ImportBackgroundChecks.cs" />
     <Compile Include="Jobs\ImportTrainings.cs" />
     <Compile Include="Migrations\011_FluidFixes.cs" />
+    <Compile Include="Migrations\013_SecondBackgroundCheckFix.cs" />
     <Compile Include="Migrations\012_RequestLauncher.cs" />
     <Compile Include="Migrations\010_AdditionalTrainingTypes.cs" />
     <Compile Include="Migrations\008_TrainingWorkflowUpdates.cs" />
@@ -101,6 +102,7 @@
     <Compile Include="MinistrySafeApi\TrainingResponse.cs" />
     <Compile Include="MinistrySafeApi\CreateUserRequest.cs" />
     <Compile Include="MinistrySafeApi\BackgroundCheckResponse.cs" />
+    <Compile Include="MinistrySafeApi\UsersResponse.cs" />
     <Compile Include="MinistrySafeApi\UserResponse.cs" />
     <Compile Include="MinistrySafeApi\GetTrainingResponse.cs" />
     <Compile Include="MinistrySafeApi\TrainingWebhook.cs" />
@@ -117,9 +119,7 @@
     <None Include="Build.tasks" />
     <None Include="builds\.version" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Utility\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="$(SolutionDir)Rock.Common\Rock.Common.csproj">
       <Project>{13568622-324e-4493-b605-c9896e725d30}</Project>

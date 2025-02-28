@@ -60,12 +60,12 @@ namespace com.bemaservices.MinistrySafe.Constants
         /// <summary>
         /// The checkr requestlist block
         /// </summary>
-        public static readonly string MINISTRYSAFE_SURVEY_TYPES = "F5E8E5C6-1DD4-4E17-83D8-ED2F9F25E523";
+        public static readonly string MINISTRYSAFE_SURVEY_TYPES = "95EF81D2-C192-4B9E-A7A3-5E1E90BDA3CE";
 
         /// <summary>
         /// The checkr requestlist block
         /// </summary>
-        public static readonly string MINISTRYSAFE_USER_TYPES = "F36A5DF7-D35A-4BE6-8710-AA9FCD3F083D";
+        public static readonly string MINISTRYSAFE_USER_TYPES = "559E79C6-2EAB-4A0D-A16F-59D9B63F002F";
 
         /// <summary>
         /// The ministrysafe tags
