@@ -498,8 +498,19 @@ namespace com.bemaservices.MinistrySafe
             var status = backgroundCheckWebhook.Status;
             var completionDate = backgroundCheckWebhook.CompleteDate.AsDateTime();
             var orderDate = backgroundCheckWebhook.OrderDate.AsDateTime();
-            var tazworkFlagged = backgroundCheckWebhook.TazworkFlagged;
 
+            bool? tazworkFlagged = null;
+            BackgroundCheckResponse getDocumentResponse;
+            List<string> errorMessages = new List<string>();
+
+            if ( MinistrySafeApiUtility.GetBackgroundCheck( backgroundCheckWebhook.Id, out getDocumentResponse, errorMessages ) )
+            {
+                tazworkFlagged = getDocumentResponse.TazworkFlagged;
+            }
+            else
+            {
+                LogErrors( errorMessages );
+            }
 
             return UpdateBackgroundCheck( requestId, externalId, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged );
         }
