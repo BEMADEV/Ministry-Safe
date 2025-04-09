@@ -793,7 +793,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                     var settings = MinistrySafe.GetSettings( rockContext );
                     if ( settings != null )
                     {
-                        var enableDebugging = MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, true ).AsBoolean();
+                        var enableDebugging = MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, false ).AsBoolean();
                         if ( enableDebugging )
                         {
                             stringBuilder.AppendFormat( " Request:{0}"
@@ -806,7 +806,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                     }
                 }
 
-                stringBuilder.AppendFormat("Response:{1}" , restResponse.Content );
+                stringBuilder.AppendFormat(" Response:{0}" , restResponse.Content );
 
                 errorMessages.Add( stringBuilder.ToString() );
                 return false;

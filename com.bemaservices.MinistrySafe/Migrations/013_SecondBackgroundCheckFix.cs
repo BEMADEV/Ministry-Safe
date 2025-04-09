@@ -53,6 +53,18 @@ namespace com.bemaservices.MinistrySafe.Migrations
         {
             #region Background Check
 
+            Sql( @"
+                    Delete
+                    From WorkflowAction wa
+                    Where ActionTypeId in (
+                        Select wat.Id
+                        From WorkflowActionType wat
+                        Where wat.[Guid] in (
+                                    'CB94B493-0B95-4328-AB3C-874180FF1FEA',
+                                    '304E76E2-BA98-4B72-8E37-B91917179E5B'
+                                        )
+                        )
+                " );
             RockMigrationHelper.DeleteWorkflowActionType( "CB94B493-0B95-4328-AB3C-874180FF1FEA" ); // Background Check:Process Result:Save Date
             RockMigrationHelper.DeleteWorkflowActionType( "304E76E2-BA98-4B72-8E37-B91917179E5B" ); // Background Check:Process Result:Save Report
 
