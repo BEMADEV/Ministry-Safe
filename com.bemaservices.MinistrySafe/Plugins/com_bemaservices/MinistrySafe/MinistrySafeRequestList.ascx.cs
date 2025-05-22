@@ -26,6 +26,7 @@ using Rock;
 using Rock.Attribute;
 using Rock.Checkr;
 using Rock.Data;
+using Rock.Lava;
 using Rock.Model;
 using Rock.Web.UI;
 using Rock.Web.UI.Controls;
@@ -339,7 +340,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         /// <summary>
         /// The Checkr table row columns tags
         /// </summary>
-        [DotLiquid.LiquidType( "Name", "Id", "PersonId", "HasWorkflow", "RequestDate",
+        [LavaType( "Name", "Id", "PersonId", "HasWorkflow", "RequestDate",
             "ResponseDate", "RecordFound", "RecordFoundLabel", "HasResponseData",
             "ResponseDocumentText", "ResponseId", "ReportStatus" )]
         private class BackgroundCheckRow
