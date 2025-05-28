@@ -27,6 +27,7 @@ using Rock.Model;
 using Rock.Security;
 using System;
 using Rock;
+using System.Text;
 
 namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 {
@@ -35,48 +36,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
     /// </summary>
     internal static class MinistrySafeApiUtility
     {
-        #region Utilities        
-        /// <summary>
-        /// Gets the settings.
-        /// </summary>
-        /// <param name="rockContext">The rock context.</param>
-        /// <returns>List&lt;AttributeValue&gt;.</returns>
-        private static List<AttributeValue> GetSettings( RockContext rockContext )
-        {
-            var ministrySafeEntityType = EntityTypeCache.Get( typeof( com.bemaservices.MinistrySafe.MinistrySafe ) );
-            if ( ministrySafeEntityType != null )
-            {
-                var service = new AttributeValueService( rockContext );
-                return service.Queryable( "Attribute" )
-                    .Where( v => v.Attribute.EntityTypeId == ministrySafeEntityType.Id )
-                    .ToList();
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Gets the setting value.
-        /// </summary>
-        /// <param name="values">The values.</param>
-        /// <param name="key">The key.</param>
-        /// <param name="encryptedValue">if set to <c>true</c> [encrypted value].</param>
-        /// <returns>System.String.</returns>
-        private static string GetSettingValue( List<AttributeValue> values, string key, bool encryptedValue = false )
-        {
-            string value = values
-                .Where( v => v.AttributeKey == key )
-                .Select( v => v.Value )
-                .FirstOrDefault();
-            if ( encryptedValue && !string.IsNullOrWhiteSpace( value ) )
-            {
-                try
-                { value = Encryption.DecryptString( value ); }
-                catch { }
-            }
-
-            return value;
-        }
+        #region Utilities   
 
         /// <summary>
         /// Return a rest client.
@@ -85,14 +45,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         private static RestClient RestClient()
         {
             string token = null;
-            bool isStaging = false;
+            string serverUrl = null;
             using ( RockContext rockContext = new RockContext() )
             {
-                var settings = GetSettings( rockContext );
+                var settings = MinistrySafe.GetSettings( rockContext );
                 if ( settings != null )
                 {
-                    token = GetSettingValue( settings, "AccessToken", true );
-                    isStaging = GetSettingValue( settings, "IsStaging", false ).AsBoolean();
+                    token = MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
+                    serverUrl = MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
                 }
             }
 
@@ -101,7 +61,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 token = GlobalAttributesCache.Value( "MinistrySafeAPIToken" );
             }
 
-            var serverLink = isStaging ? MinistrySafeConstants.MINISTRYSAFE_STAGING_APISERVER : MinistrySafeConstants.MINISTRYSAFE_APISERVER;
+            var serverLink = serverUrl.IsNullOrWhiteSpace() ? MinistrySafeConstants.MINISTRYSAFE_APISERVER : serverUrl;
             var restClient = new RestClient( serverLink );
 
             restClient.AddDefaultHeader( "Authorization", string.Format( "Token token={0}", token ) );
@@ -303,6 +263,41 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         }
 
         /// <summary>
+        /// Gets the tags.
+        /// </summary>
+        /// <param name="getTagsResponse">The get tags response.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        internal static bool GetSurveyTypes( out List<string> getSurveyTypesResponse, List<string> errorMessages )
+        {
+            getSurveyTypesResponse = null;
+            RestClient restClient = RestClient();
+            RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_SURVEY_TYPES_URL );
+            IRestResponse restResponse = restClient.Execute( restRequest );
+
+            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            {
+                errorMessages.Add( "Failed to authorize MinistrySafe. Please confirm your access token." );
+                return false;
+            }
+
+            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            {
+                errorMessages.Add( "Failed to get MinistrySafe Survey Types: " + restResponse.Content );
+                return false;
+            }
+
+            getSurveyTypesResponse = JsonConvert.DeserializeObject<List<string>>( restResponse.Content );
+            if ( getSurveyTypesResponse == null )
+            {
+                errorMessages.Add( "Get Survey Types is not valid: " + restResponse.Content );
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Creates the candidate.
         /// </summary>
         /// <param name="workflow">The workflow.</param>
@@ -368,7 +363,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         public static bool GetUser( Rock.Model.Workflow workflow, Person person, int personAliasId, out UserResponse userResponse, List<string> errorMessages )
         {
             userResponse = null;
-            List<UserResponse> usersResponse = null;
+            List<UserResponse> userResponseList = null;
             RestClient restClient = RestClient();
             RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_USERS_URL );
             restRequest.AddParameter( "external_id", "pa" + personAliasId );
@@ -387,13 +382,25 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            usersResponse = JsonConvert.DeserializeObject<List<UserResponse>>( restResponse.Content );
-            if ( usersResponse == null )
+            try
+            {
+                userResponseList = JsonConvert.DeserializeObject<List<UserResponse>>( restResponse.Content );
+            }
+            catch
+            {
+                UsersResponse usersResponse = JsonConvert.DeserializeObject<UsersResponse>( restResponse.Content );
+                if ( usersResponse != null )
+                {
+                    userResponseList = usersResponse.Users;
+                }
+            }
+
+            if ( userResponseList == null )
             {
                 errorMessages.Add( "Get User is not valid: " + restResponse.Content );
                 return false;
             }
-            userResponse = usersResponse.FirstOrDefault();
+            userResponse = userResponseList.FirstOrDefault();
 
             return userResponse != null;
         }
@@ -779,7 +786,29 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             if ( restResponse.StatusCode != HttpStatusCode.Created )
             {
-                errorMessages.Add( "Failed to create MinistrySafe Background Check: " + restResponse.Content );
+                StringBuilder stringBuilder = new StringBuilder();
+                stringBuilder.Append( "Failed to create MinistrySafe Background Check for request." );
+                using ( var rockContext = new RockContext() )
+                {
+                    var settings = MinistrySafe.GetSettings( rockContext );
+                    if ( settings != null )
+                    {
+                        var enableDebugging = MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, false ).AsBoolean();
+                        if ( enableDebugging )
+                        {
+                            stringBuilder.AppendFormat( " Request:{0}"
+                                , restRequest.Parameters
+                                .Where( p => !p.Name.Contains( "Authorization" ) )
+                                .Select( p => p.Name + ": " + p.Value )
+                                .ToList()
+                                .AsDelimited( ", " ) );
+                        }
+                    }
+                }
+
+                stringBuilder.AppendFormat(" Response:{0}" , restResponse.Content );
+
+                errorMessages.Add( stringBuilder.ToString() );
                 return false;
             }
 

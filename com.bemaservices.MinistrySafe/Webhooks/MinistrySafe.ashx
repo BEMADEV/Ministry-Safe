@@ -42,8 +42,10 @@ namespace com.bemaservices.Webhooks
                     postedData = reader.ReadToEnd();
                 }
 
-                if ( !com.bemaservices.MinistrySafe.MinistrySafe.SaveWebhookResults( postedData ) )
+                string responseMessage = null;
+                if ( !com.bemaservices.MinistrySafe.MinistrySafe.SaveWebhookResults( postedData, out responseMessage ) )
                 {
+                    response.Write( responseMessage );
                     response.StatusCode = ( int ) HttpStatusCode.OK; //If it is not ok, the website will re-direct to the error screen
                     return;
                 }

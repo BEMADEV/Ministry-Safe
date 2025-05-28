@@ -95,5 +95,12 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <value>The complete date.</value>
         [JsonProperty( "complete_date" )]
         public string CompleteDate { get; set; }
+
+        /// <summary>
+        /// Gets or sets the complete date.
+        /// </summary>
+        /// <value>The complete date.</value>
+        [JsonProperty( "tazwork_flagged" )]
+        public bool? TazworkFlagged { get; set; }
     }
 }

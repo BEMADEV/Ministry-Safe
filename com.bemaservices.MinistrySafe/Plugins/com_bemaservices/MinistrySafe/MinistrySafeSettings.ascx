@@ -24,7 +24,8 @@
                                 </div>
                                 <div class="col-md-5 col-md-offset-1 col-sm-6">
                                     <Rock:RockTextBox ID="tbAccessToken" runat="server" Label="MinistrySafe API Token" Required="true" RequiredErrorMessage="A MinistrySafe API Token is Required" Help="The MinistrySafe Access Token is generated when a MinistrySafe Account is created on the Rock website." />
-                                    <Rock:RockCheckBox ID="cbIsStaging" runat="server" Label="Is Staging Environment" Help="Are you using a staging environment?" />
+                                    <Rock:RockTextBox ID="tbServerUrl" runat="server" Label="MinistrySafe API Server Url" Required="true" RequiredErrorMessage="A MinistrySafe API Server Url is Required" Help="This is generally https://safetysystem.abusepreventionsystems.com/api/ for production environments, and https://staging.ministrysafe.com/api/ in staging environments." />
+                                    <Rock:RockCheckBox ID="cbEnableDebugging" runat="server" Label="Enable Debugging?" />
                                     <div class="actions">
                                         <asp:LinkButton ID="btnSave" runat="server" CssClass="btn btn-primary" OnClick="btnSave_Click">Save</asp:LinkButton>
                                     </div>
@@ -43,16 +44,22 @@
                                         <asp:LinkButton ID="btnEdit" runat="server" CssClass="btn btn-primary" OnClick="btnEdit_Click">Edit</asp:LinkButton>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <Rock:RockLiteral ID="lPackages" runat="server" Label="Enabled Background Check Types" />
                                     <div class="actions">
                                         <asp:LinkButton ID="btnUpdate" runat="server" CssClass="btn btn-default btn-xs" OnClick="btnUpdate_Click"><i class="fa fa-sync"></i> Update Packages</asp:LinkButton>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <Rock:RockLiteral ID="lTags" runat="server" Label="Enabled Tags" />
                                     <div class="actions">
                                         <asp:LinkButton ID="btnUpdateTags" runat="server" CssClass="btn btn-default btn-xs" OnClick="btnUpdateTags_Click"><i class="fa fa-sync"></i> Update Tags</asp:LinkButton>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <Rock:RockLiteral ID="lSurveyTypes" runat="server" Label="Enabled Survey Types" />
+                                    <div class="actions">
+                                        <asp:LinkButton ID="btnUpdateSurveyTypes" runat="server" CssClass="btn btn-default btn-xs" OnClick="btnUpdateSurveyTypes_Click"><i class="fa fa-sync"></i> Update Survey Types</asp:LinkButton>
                                     </div>
                                 </div>
                             </div>

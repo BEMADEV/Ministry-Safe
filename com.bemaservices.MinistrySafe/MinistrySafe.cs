@@ -19,7 +19,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
+using System.Data.Entity;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
 using com.bemaservices.MinistrySafe.Constants;
 using com.bemaservices.MinistrySafe.MinistrySafeApi;
 using com.bemaservices.MinistrySafe.Model;
@@ -41,8 +45,26 @@ namespace com.bemaservices.MinistrySafe
     [Export( typeof( BackgroundCheckComponent ) )]
     [ExportMetadata( "ComponentName", "MinistrySafe" )]
 
-    [EncryptedTextField( "Access Token", "MinistrySafe Access Token", true, "", "", 0, null, true )]
-    [BooleanField( "Is Staging", "Is Staging Environment", false, "", 0, "IsStaging" )]
+    [EncryptedTextField( "Access Token",
+        Description = "MinistrySafe Access Token",
+        Key = MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN,
+        IsRequired = true,
+        DefaultValue = "",
+        Order = 0,
+        IsPassword = true )]
+    [TextField( "MinistrySafe Server Url",
+        Description = "MinistrySafe Access Token",
+        Key = MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL,
+        IsRequired = true,
+        DefaultValue = MinistrySafeConstants.MINISTRYSAFE_APISERVER,
+        Order = 1 )]
+    [BooleanField( "Enable Debugging?",
+        Key = MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING,
+        IsRequired = true,
+        DefaultBooleanValue = false,
+        Order = 2
+        )]
+
     public class MinistrySafe : BackgroundCheckComponent
     {
         #region Private Fields
@@ -84,6 +106,7 @@ namespace com.bemaservices.MinistrySafe
                 {
                     errorMessages.Add( "The 'MinistrySafe' background check provider requires a valid workflow." );
                     UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                    UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                     return true;
                 }
 
@@ -97,6 +120,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to get Person." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -108,6 +132,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to get Package." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -116,6 +141,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to determine whether the role is Child-Serving." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -124,6 +150,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to determine whether the applicant is over 13." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -132,6 +159,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to determine the Applicant's salary range." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -147,6 +175,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to create user." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -155,6 +184,7 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to create background check." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
@@ -203,6 +233,7 @@ namespace com.bemaservices.MinistrySafe
                 ExceptionLogService.LogException( ex, null );
                 errorMessages.Add( ex.Message );
                 UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                 return true;
             }
         }
@@ -215,7 +246,7 @@ namespace com.bemaservices.MinistrySafe
         /// <returns>System.String.</returns>
         public override string GetReportUrl( string backgroundCheckId )
         {
-            var isAuthorized = this.IsAuthorized( Authorization.VIEW, this.GetCurrentPerson() );
+            var isAuthorized = this.IsAuthorized( Rock.Security.Authorization.VIEW, this.GetCurrentPerson() );
 
             if ( isAuthorized )
             {
@@ -247,7 +278,7 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="reportStatus">The report status.</param>
         /// <param name="rockContext">The rock context.</param>
         /// <param name="personAliasId">The person alias identifier.</param>
-        private static void UpdateBackgroundCheckWorkflow( int id, string recommendation, string documentId, string reportStatus, RockContext rockContext, int? personAliasId = null )//, string customPackageCode = null, int? level = null, string userType = null )
+        private static void UpdateBackgroundCheckWorkflow( int id, string recommendation, string documentId, string reportStatus, RockContext rockContext, int? personAliasId = null, string resultsUrl = null, int? interactionId = null )//, string customPackageCode = null, int? level = null, string userType = null )
         {
             // Make sure the workflow isn't locked (i.e., it's still being worked on by the 'SendRequest' method of the workflow
             // BackgroundCheckComponent) before we start working on it -- especially before we load the workflow's attributes.
@@ -258,6 +289,8 @@ namespace com.bemaservices.MinistrySafe
                 var workflow = workflowService.Get( id );
                 if ( workflow != null && workflow.IsActive )
                 {
+                    LogMessageToInteraction( interactionId, "Updating Workflow." );
+
                     workflow.LoadAttributes();
                     if ( workflow.Attributes.ContainsKey( "ReportStatus" ) )
                     {
@@ -308,6 +341,7 @@ namespace com.bemaservices.MinistrySafe
                             workflow.MarkComplete( recommendation );
                         }
                     }
+
                     // Save the report link
                     if ( documentId.IsNotNullOrWhiteSpace() )
                     {
@@ -316,6 +350,18 @@ namespace com.bemaservices.MinistrySafe
                             FieldTypeCache.Get( Rock.SystemGuid.FieldType.TEXT.AsGuid() ), rockContext,
                             new Dictionary<string, string> { { "ispassword", "false" } } ) )
                         {
+                        }
+
+                        if ( workflow.Attributes.ContainsKey( "ReportFile" ) && resultsUrl.IsNotNullOrWhiteSpace() )
+                        {
+                            var attributeCache = workflow.Attributes["ReportFile"];
+                            // Save the report
+                            Guid? binaryFileGuid = null;
+                            binaryFileGuid = SaveFile( attributeCache, resultsUrl, workflow.Id.ToString() + ".pdf" );
+                            if ( binaryFileGuid.HasValue )
+                            {
+                                workflow.SetAttributeValue( attributeCache.Key, binaryFileGuid.Value.ToString() );
+                            }
                         }
                     }
 
@@ -389,10 +435,59 @@ namespace com.bemaservices.MinistrySafe
 
                 rockContext.SaveChanges();
 
+                LogMessageToInteraction( interactionId, "Workflow Updated. Processing now." );
+
+
                 List<string> workflowErrors;
                 workflowService.Process( workflow, out workflowErrors );
                 _lockObjects.TryRemove( id, out _ ); // we no longer need that lock for this workflow
+                LogMessageToInteraction( interactionId, "Workflow Processing Complete." );
+
             }
+        }
+
+        private static Guid? SaveFile( AttributeCache binaryFileAttribute, string url, string fileName )
+        {
+            // get BinaryFileType info
+            if ( binaryFileAttribute != null &&
+                binaryFileAttribute.QualifierValues != null &&
+                binaryFileAttribute.QualifierValues.ContainsKey( "binaryFileType" ) )
+            {
+                Guid? fileTypeGuid = binaryFileAttribute.QualifierValues["binaryFileType"].Value.AsGuidOrNull();
+                if ( fileTypeGuid.HasValue )
+                {
+                    RockContext rockContext = new RockContext();
+                    BinaryFileType binaryFileType = new BinaryFileTypeService( rockContext ).Get( fileTypeGuid.Value );
+
+                    if ( binaryFileType != null )
+                    {
+                        byte[] data = null;
+
+                        using ( WebClient wc = new WebClient() )
+                        {
+                            data = wc.DownloadData( url );
+                        }
+
+                        BinaryFile binaryFile = new BinaryFile();
+                        binaryFile.Guid = Guid.NewGuid();
+                        binaryFile.IsTemporary = true;
+                        binaryFile.BinaryFileTypeId = binaryFileType.Id;
+                        binaryFile.MimeType = "application/pdf";
+                        binaryFile.FileName = fileName;
+                        binaryFile.FileSize = data.Length;
+                        binaryFile.ContentStream = new MemoryStream( data );
+
+                        var binaryFileService = new BinaryFileService( rockContext );
+                        binaryFileService.Add( binaryFile );
+
+                        rockContext.SaveChanges();
+
+                        return binaryFile.Guid;
+                    }
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -400,20 +495,53 @@ namespace com.bemaservices.MinistrySafe
         /// </summary>
         /// <param name="backgroundCheckWebhook">The background check webhook.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        private static bool UpdateBackgroundCheckAndWorkFlow( BackgroundCheckWebhook backgroundCheckWebhook )
+        private static bool UpdateBackgroundCheckAndWorkFlow( BackgroundCheckWebhook backgroundCheckWebhook, int? interactionId = null )
         {
-            var requestId = backgroundCheckWebhook.Id;
-            var externalId = backgroundCheckWebhook.ExternalId;
-            var resultsUrl = backgroundCheckWebhook.ResultsUrl;
-            var userId = backgroundCheckWebhook.UserId;
-            var level = backgroundCheckWebhook.Level;
-            var customPackageCode = backgroundCheckWebhook.CustomBackgroundCheckPackageCode;
-            var status = backgroundCheckWebhook.Status;
-            var completionDate = backgroundCheckWebhook.CompleteDate.AsDateTime();
-            var orderDate = backgroundCheckWebhook.OrderDate.AsDateTime();
+            try
+            {
 
+                var requestId = backgroundCheckWebhook.Id;
+                var externalId = backgroundCheckWebhook.ExternalId;
+                var resultsUrl = backgroundCheckWebhook.ResultsUrl;
+                var userId = backgroundCheckWebhook.UserId;
+                var level = backgroundCheckWebhook.Level;
+                var customPackageCode = backgroundCheckWebhook.CustomBackgroundCheckPackageCode;
+                var status = backgroundCheckWebhook.Status;
+                var completionDate = backgroundCheckWebhook.CompleteDate.AsDateTime();
+                var orderDate = backgroundCheckWebhook.OrderDate.AsDateTime();
 
-            return UpdateBackgroundCheck( requestId, externalId, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate );
+                LogMessageToInteraction( interactionId, "Loaded Background Check Properties from Webhook Data." );
+
+                bool? tazworkFlagged = null;
+                BackgroundCheckResponse getDocumentResponse;
+                List<string> errorMessages = new List<string>();
+
+                if ( MinistrySafeApiUtility.GetBackgroundCheck( backgroundCheckWebhook.Id, out getDocumentResponse, errorMessages ) )
+                {
+                    tazworkFlagged = getDocumentResponse.TazworkFlagged;
+                }
+                else
+                {
+                    LogErrors( errorMessages );
+                    LogMessageToInteraction( interactionId, "Serveral Errors have occurred. See the exception log for more details." );
+
+                }
+
+                LogMessageToInteraction( interactionId, "Loaded tazworkFlagged info." );
+
+                return UpdateBackgroundCheck( requestId, externalId, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged, null, interactionId );
+            }
+            catch ( Exception ex )
+            {
+                ExceptionLogService.LogException(
+                    new Exception(
+                        String.Format( "MinistrySafe Error{0}"
+                        , interactionId != null ? String.Format( " on webhook data id {0}", interactionId ) : ""
+                        )
+                    , ex ), null );
+                LogMessageToInteraction( interactionId, "An Error has occurred. See the exception log for more details." );
+                return false;
+            }
         }
 
         /// <summary>
@@ -430,10 +558,12 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="orderDate">The order date.</param>
         /// <param name="workflowTypeCache">The workflow type cache.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        private static bool UpdateBackgroundCheck( string requestId, string externalId, string resultsUrl, int? userId, int? level, string customPackageCode, string status, DateTime? completionDate, DateTime? orderDate, WorkflowTypeCache workflowTypeCache = null )
+        private static bool UpdateBackgroundCheck( string requestId, string externalId, string resultsUrl, int? userId, int? level, string customPackageCode, string status, DateTime? completionDate, DateTime? orderDate, bool? tazworkFlagged = null, WorkflowTypeCache workflowTypeCache = null, int? interactionId = null )
         {
             try
             {
+                LogMessageToInteraction( interactionId, "Searching for PersonAliasId." );
+
                 using ( var rockContext = new RockContext() )
                 {
                     //string userType = null;
@@ -445,6 +575,8 @@ namespace com.bemaservices.MinistrySafe
                     }
 
                     int? personAliasId = externalId.RemoveAllNonNumericCharacters().AsIntegerOrNull();
+                    LogMessageToInteraction( interactionId, "Found PersonAliasId. Searching for Background Check." );
+
                     var backgroundCheck = new BackgroundCheckService( rockContext )
                         .Queryable( "PersonAlias.Person" )
                         .Where( g => ( requestId != null && g.RequestId == requestId ) || ( requestId == null && g.PersonAliasId == personAliasId ) )
@@ -454,8 +586,15 @@ namespace com.bemaservices.MinistrySafe
                         .ThenByDescending( m => m.RequestDate )
                         .FirstOrDefault();
 
+                    if ( backgroundCheck != null )
+                    {
+                        LogMessageToInteraction( interactionId, String.Format( "Matched on BackgroundCheck Id {0}", backgroundCheck.Id ) );
+                    }
+
                     if ( backgroundCheck == null )
                     {
+                        LogMessageToInteraction( interactionId, "No Matching Background Check. Creating New Record." );
+
                         backgroundCheck = new BackgroundCheck();
                         backgroundCheckService.Add( backgroundCheck );
 
@@ -466,13 +605,25 @@ namespace com.bemaservices.MinistrySafe
 
                         backgroundCheck.RequestId = requestId;
                         rockContext.SaveChanges();
+                        LogMessageToInteraction( interactionId, String.Format( "New Record Created: Id {0}", backgroundCheck.Id ) );
+
                     }
+
+                    LogMessageToInteraction( interactionId, "Setting Status." );
 
                     backgroundCheck.Status = status;
                     if ( backgroundCheck.Status.IsNullOrWhiteSpace() )
                     {
                         backgroundCheck.Status = "consider";
                     }
+
+                    if ( tazworkFlagged != null && tazworkFlagged != true )
+                    {
+                        backgroundCheck.Status = "clear";
+                    }
+
+                    LogMessageToInteraction( interactionId, "Status Set. Updating Response Info" );
+
 
                     backgroundCheck.ResponseId = requestId;
                     backgroundCheck.ResponseDate = completionDate ?? ( orderDate ?? RockDateTime.Now );
@@ -481,11 +632,11 @@ namespace com.bemaservices.MinistrySafe
                         backgroundCheck.ResponseData = resultsUrl;
                     }
 
-                    //rockContext.SqlLogging( true );
+                    LogMessageToInteraction( interactionId, "Response Info Updated. Saving Changes." );
 
                     rockContext.SaveChanges();
 
-                    //rockContext.SqlLogging( false );
+                    LogMessageToInteraction( interactionId, "Changes Saved. Setting Recommendation and Report Status." );
 
                     string recommendation = null;
                     string reportStatus = null; //Pass,Fail,Review
@@ -529,11 +680,25 @@ namespace com.bemaservices.MinistrySafe
                             break;
                     }
 
+                    LogMessageToInteraction( interactionId,
+                        String.Format(
+                            "Recommendation set to {0}. Report Status set to {1}. Grabbing Workflow."
+                            , recommendation
+                            , reportStatus
+                            )
+                        );
+
+
                     var workflowService = new WorkflowService( rockContext );
                     Rock.Model.Workflow workflow = null;
                     if ( backgroundCheck.WorkflowId.HasValue )
                     {
                         workflow = workflowService.Get( backgroundCheck.WorkflowId.Value );
+                    }
+
+                    if ( workflow != null )
+                    {
+                        LogMessageToInteraction( interactionId, String.Format("Found Matching Workflow Id: {0}.", workflow.Id) );
                     }
 
                     if ( workflow == null && workflowTypeCache != null )
@@ -544,17 +709,20 @@ namespace com.bemaservices.MinistrySafe
                         workflowService.Add( workflow );
                         rockContext.SaveChanges();
                         backgroundCheck.WorkflowId = workflow.Id;
-                        //if ( userType == null )
-                        //{
-                        //    userType = FindUserType( userId.ToString(), rockContext, errorMessages );
-                        //}
+                        LogMessageToInteraction( interactionId, String.Format( "Created New Workflow Id: {0}.", workflow.Id ) );
+
                     }
 
                     rockContext.SaveChanges();
 
+                    LogMessageToInteraction( interactionId, "Background Check Update Complete." );
+
+
                     if ( backgroundCheck.WorkflowId.HasValue && backgroundCheck.WorkflowId > 0 )
                     {
-                        UpdateBackgroundCheckWorkflow( backgroundCheck.WorkflowId.Value, recommendation, backgroundCheck.ResponseId, reportStatus, rockContext, backgroundCheck.PersonAliasId );//, customPackageCode, level, userType );
+                        LogMessageToInteraction( interactionId, "Launching UpdateBackgroundCheckWorkflow method." );
+
+                        UpdateBackgroundCheckWorkflow( backgroundCheck.WorkflowId.Value, recommendation, backgroundCheck.ResponseId, reportStatus, rockContext, backgroundCheck.PersonAliasId, resultsUrl, interactionId );//, customPackageCode, level, userType );
                     }
                 }
 
@@ -562,6 +730,13 @@ namespace com.bemaservices.MinistrySafe
             }
             catch ( Exception ex )
             {
+                ExceptionLogService.LogException(
+                    new Exception(
+                        String.Format( "MinistrySafe Error{0}"
+                        , interactionId != null ? String.Format( " on webhook data id {0}", interactionId ) : ""
+                        )
+                    , ex ), null );
+                LogMessageToInteraction( interactionId, "An Error has occurred. See the exception log for more details." );
                 return false;
             }
         }
@@ -575,6 +750,21 @@ namespace com.bemaservices.MinistrySafe
         private void UpdateWorkflowRequestStatus( Rock.Model.Workflow workflow, RockContext rockContext, string requestStatus )
         {
             if ( SaveAttributeValue( workflow, "RequestStatus", requestStatus,
+                FieldTypeCache.Get( Rock.SystemGuid.FieldType.TEXT.AsGuid() ), rockContext, null ) )
+            {
+                rockContext.SaveChanges();
+            }
+        }
+
+        /// <summary>
+        /// Sets the workflow RequestMessage attribute.
+        /// </summary>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="requestStatus">The request message.</param>
+        private void UpdateWorkflowRequestMessage( Rock.Model.Workflow workflow, RockContext rockContext, string requestMessage )
+        {
+            if ( SaveAttributeValue( workflow, "RequestMessage", requestMessage,
                 FieldTypeCache.Get( Rock.SystemGuid.FieldType.TEXT.AsGuid() ), rockContext, null ) )
             {
                 rockContext.SaveChanges();
@@ -634,9 +824,7 @@ namespace com.bemaservices.MinistrySafe
                     string packageName = packageResponse.Name;
                     if ( !packages.ContainsKey( packageName ) )
                     {
-
                         AddPackage( rockContext, definedType, definedValueService, packageResponse, null );
-
                     }
 
                     packageResponseList.Add( packageResponse );
@@ -745,15 +933,13 @@ namespace com.bemaservices.MinistrySafe
             }
 
             DefinedValueCache userTypeDefinedValue = DefinedValueCache.Get( pkgTypeDefinedValue.GetAttributeValue( "MinistrySafeUserType" ).AsGuid() );
-            if ( userTypeDefinedValue == null )
+            if ( userTypeDefinedValue != null )
             {
-                errorMessages.Add( "The 'MinistrySafe' background check type does not have an associated user type." );
-                return false;
+                userType = userTypeDefinedValue.Value;
             }
 
             level = pkgTypeDefinedValue.GetAttributeValue( "MinistrySafePackageLevel" );
             packageCode = pkgTypeDefinedValue.GetAttributeValue( "MinistrySafePackageCode" );
-            userType = userTypeDefinedValue.Value;
             packageName = pkgTypeDefinedValue.Value;
             return true;
         }
@@ -815,6 +1001,78 @@ namespace com.bemaservices.MinistrySafe
                 foreach ( var tag in tags )
                 {
                     tag.IsActive = packageRestResponseNames.Contains( tag.Value );
+                }
+
+                rockContext.SaveChanges();
+            }
+
+            DefinedValueCache.Clear();
+            return true;
+        }
+
+        /// <summary>
+        /// Updates the survey types.
+        /// </summary>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        public static bool UpdateSurveyTypes( List<string> errorMessages )
+        {
+            List<string> surveyTypeResponseList;
+
+            if ( !MinistrySafeApiUtility.GetSurveyTypes( out surveyTypeResponseList, errorMessages ) )
+            {
+                //return false;
+            }
+
+            if ( surveyTypeResponseList == null )
+            {
+                surveyTypeResponseList = new List<string>();
+            }
+
+            List<DefinedValue> surveyTypes;
+            using ( var rockContext = new RockContext() )
+            {
+                var definedType = DefinedTypeCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_SURVEY_TYPES.AsGuid() );
+
+                DefinedValueService definedValueService = new DefinedValueService( rockContext );
+                surveyTypes = definedValueService
+                    .GetByDefinedTypeGuid( definedType.Guid )
+                    //.Where( v => v.ForeignId == 4 )
+                    .ToList();
+                var surveyTypeNames = surveyTypes.Select( dv => dv.Value ).ToList();
+
+                foreach ( var surveyTypeResponse in surveyTypeResponseList )
+                {
+                    if ( !surveyTypeNames.Contains( surveyTypeResponse ) )
+                    {
+                        DefinedValue definedValue = null;
+
+                        definedValue = new DefinedValue()
+                        {
+                            IsActive = true,
+                            DefinedTypeId = definedType.Id,
+                            ForeignId = 4,
+                            Value = surveyTypeResponse,
+                            Description = surveyTypeResponse
+                        };
+
+                        definedValueService.Add( definedValue );
+
+                        rockContext.SaveChanges();
+                    }
+                }
+
+                foreach ( var surveyType in surveyTypes )
+                {
+                    if ( surveyTypeResponseList.Contains( surveyType.Value ) )
+                    {
+                        surveyType.IsActive = true;
+                        surveyType.ForeignId = 4;
+                    }
+                    else
+                    {
+                        surveyType.IsActive = false;
+                    }
                 }
 
                 rockContext.SaveChanges();
@@ -973,9 +1231,10 @@ namespace com.bemaservices.MinistrySafe
                         var status = getAllBackgroundCheckResponse.Status;
                         var completionDate = getAllBackgroundCheckResponse.CompleteDate.AsDateTime();
                         var orderDate = getAllBackgroundCheckResponse.OrderDate.AsDateTime();
+                        var tazworkFlagged = getAllBackgroundCheckResponse.TazworkFlagged;
                         if ( completionDate.HasValue || getAllBackgroundCheckResponse.Status == "complete" )
                         {
-                            if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, workflowType ) )
+                            if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged, workflowType ) )
                             {
                                 backgroundChecksProcessed++;
                             }
@@ -1033,10 +1292,10 @@ namespace com.bemaservices.MinistrySafe
                 var completionDate = backgroundCheckResponse.CompleteDate.AsDateTime();
                 var orderDate = backgroundCheckResponse.OrderDate.AsDateTime();
 
-                
+
                 backgroundCheck.Status = "archived";
                 backgroundCheck.ResponseId = requestId;
-                backgroundCheck.ResponseDate =  RockDateTime.Now;
+                backgroundCheck.ResponseDate = RockDateTime.Now;
                 if ( resultsUrl.IsNotNullOrWhiteSpace() )
                 {
                     backgroundCheck.ResponseData = resultsUrl;
@@ -1363,7 +1622,6 @@ namespace com.bemaservices.MinistrySafe
             var surveyCode = trainingWebhook.SurveyCode;
 
             return UpdateTraining( externalId, userId, score, surveyCode, completedDateTime, null, null );
-
         }
 
         /// <summary>
@@ -1670,6 +1928,28 @@ namespace com.bemaservices.MinistrySafe
             }
         }
 
+        private static void LogMessageToInteraction( int? interactionId, string logMessage )
+        {
+            if ( interactionId != null )
+            {
+                using ( var rockContext = new RockContext() )
+                {
+                    var interactionService = new InteractionService( rockContext );
+                    var interaction = interactionService.Get( interactionId.Value );
+                    if ( interaction != null )
+                    {
+                        StringBuilder sb = new StringBuilder( interaction.InteractionData );
+                        sb.AppendFormat( "</br>[{0}] {1}"
+                                , RockDateTime.Now.ToString()
+                                , logMessage
+                            );
+                        interaction.InteractionData = sb.ToString();
+                        rockContext.SaveChanges();
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Gets the person that is currently logged in.
         /// </summary>
@@ -1847,8 +2127,123 @@ namespace com.bemaservices.MinistrySafe
         /// </summary>
         /// <param name="postedData">The posted data.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        public static bool SaveWebhookResults( string postedData )
+        public static bool SaveWebhookResults( string postedData, out string responseMessage )
         {
+            responseMessage = string.Empty;
+
+            // Save Interaction storing information
+            int? interactionId = null;
+            using ( var rockContext = new RockContext() )
+            {
+                var settings = GetSettings( rockContext );
+                if ( settings != null )
+                {
+                    var enableDebugging = GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, false ).AsBoolean();
+                    if ( enableDebugging )
+                    {
+                        var channelName = "MinistrySafe";
+                        var componentName = "Webhook Data";
+
+                        InteractionChannelCache channel = null;
+                        // Find by Name
+                        int? interactionChannelId = new InteractionChannelService( rockContext )
+                            .Queryable()
+                            .AsNoTracking()
+                            .Where( c => c.Name == channelName )
+                            .Select( c => c.Id )
+                            .Cast<int?>()
+                            .FirstOrDefault();
+
+                        if ( interactionChannelId != null )
+                        {
+                            channel = InteractionChannelCache.Get( interactionChannelId.Value );
+                        }
+                        else
+                        {
+                            // If still no match, and we have a name, create a new channel
+                            using ( var newRockContext = new RockContext() )
+                            {
+                                Rock.Model.InteractionChannel interactionChannel = new Rock.Model.InteractionChannel();
+                                interactionChannel.Name = channelName;
+                                new InteractionChannelService( newRockContext ).Add( interactionChannel );
+                                newRockContext.SaveChanges();
+                                channel = InteractionChannelCache.Get( interactionChannel.Id );
+                            }
+                        }
+
+                        if ( channel == null )
+                        {
+                            responseMessage = "Interaction Channel could not be found to saved posted data to.";
+                            Rock.Model.ExceptionLogService.LogException( new Exception( responseMessage ), null );
+                            return false;
+                        }
+
+                        // Get Interaction Component
+                        InteractionComponentCache component = null;
+                        int? interactionComponentId = new InteractionComponentService( rockContext )
+                            .Queryable()
+                            .AsNoTracking()
+                            .Where( c => c.InteractionChannelId == channel.Id )
+                            .Where( c => c.Name.Equals( componentName, StringComparison.OrdinalIgnoreCase ) )
+                            .Select( c => c.Id )
+                            .Cast<int?>()
+                            .FirstOrDefault();
+
+                        if ( interactionComponentId != null )
+                        {
+                            component = InteractionComponentCache.Get( interactionComponentId.Value );
+                        }
+                        else
+                        {
+                            // If still no match, and we have a name, create a new channel
+                            using ( var newRockContext = new RockContext() )
+                            {
+                                var interactionComponent = new InteractionComponent();
+                                interactionComponent.Name = componentName;
+                                interactionComponent.InteractionChannelId = channel.Id;
+                                new InteractionComponentService( newRockContext ).Add( interactionComponent );
+                                newRockContext.SaveChanges();
+
+                                component = InteractionComponentCache.Get( interactionComponent.Id );
+                            }
+                        }
+
+                        if ( component == null )
+                        {
+                            responseMessage = "Interaction Component could not be found to saved posted data to.";
+                            Rock.Model.ExceptionLogService.LogException( new Exception( responseMessage ), null );
+                            return false;
+                        }
+
+                        // Write the interaction record
+                        StringBuilder sb = new StringBuilder();
+                        sb.AppendFormat( "[{0}] Received Webhook Data </br> {1}</br></br>"
+                                , RockDateTime.Now.ToString()
+                                , postedData
+                            );
+
+                        var interaction = new InteractionService( rockContext )
+                            .AddInteraction(
+                            interactionComponentId: component.Id,
+                            entityId: null,
+                            operation: "Data Posted",
+                            interactionData: sb.ToString(),
+                            personAliasId: null,
+                            dateTime: RockDateTime.Now,
+                            deviceApplication: null,
+                            deviceOs: null,
+                            deviceClientType: null,
+                            deviceTypeData: null,
+                            ipAddress: null,
+                            browserSessionId: null );
+                        rockContext.SaveChanges();
+
+                        interactionId = interaction.Id;
+                    }
+                }
+            }
+
+            // Try casting as Training
             TrainingWebhook trainingWebhook = JsonConvert.DeserializeObject<TrainingWebhook>( postedData, new JsonSerializerSettings()
             {
                 Error = ( sender, errorEventArgs ) =>
@@ -1858,28 +2253,32 @@ namespace com.bemaservices.MinistrySafe
                 }
             } );
 
-            if ( trainingWebhook.CertificateUrl == null )
+            if ( trainingWebhook.CertificateUrl != null )
             {
-                BackgroundCheckWebhook backgroundCheckWebhook = JsonConvert.DeserializeObject<BackgroundCheckWebhook>( postedData, new JsonSerializerSettings()
-                {
-                    Error = ( sender, errorEventArgs ) =>
-                    {
-                        errorEventArgs.ErrorContext.Handled = true;
-                        Rock.Model.ExceptionLogService.LogException( new Exception( errorEventArgs.ErrorContext.Error.Message ), null );
-                    }
-                } );
-
-                if ( backgroundCheckWebhook == null )
-                {
-                    string errorMessage = "Webhook data is not valid: " + postedData;
-                    Rock.Model.ExceptionLogService.LogException( new Exception( errorMessage ), null );
-                    return false;
-                }
-
-                return UpdateBackgroundCheckAndWorkFlow( backgroundCheckWebhook );
+                responseMessage = "Valid Training Data Received";
+                return UpdateTrainingFromWebhook( trainingWebhook );
             }
 
-            return UpdateTrainingFromWebhook( trainingWebhook );
+            // Try casting as Background Check
+            BackgroundCheckWebhook backgroundCheckWebhook = JsonConvert.DeserializeObject<BackgroundCheckWebhook>( postedData, new JsonSerializerSettings()
+            {
+                Error = ( sender, errorEventArgs ) =>
+                {
+                    errorEventArgs.ErrorContext.Handled = true;
+                    Rock.Model.ExceptionLogService.LogException( new Exception( errorEventArgs.ErrorContext.Error.Message ), null );
+                }
+            } );
+
+            if ( backgroundCheckWebhook != null )
+            {
+                responseMessage = "Valid Background Check Data Received";
+                return UpdateBackgroundCheckAndWorkFlow( backgroundCheckWebhook, interactionId );
+            }
+
+            // Return Invalid Data
+            responseMessage = "Webhook data is not valid: " + postedData;
+            Rock.Model.ExceptionLogService.LogException( new Exception( responseMessage ), null );
+            return false;
         }
 
         /// <summary>
@@ -1991,6 +2390,99 @@ namespace com.bemaservices.MinistrySafe
             tagList = definedValues.Select( dv => dv.Value ).ToList().AsDelimited( "," );
 
             return true;
+        }
+
+
+        /// <summary>
+        /// Gets the settings.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <returns>List&lt;AttributeValue&gt;.</returns>
+        public static List<AttributeValue> GetSettings( RockContext rockContext )
+        {
+            var ministrySafeEntityType = EntityTypeCache.Get( typeof( com.bemaservices.MinistrySafe.MinistrySafe ) );
+            if ( ministrySafeEntityType != null )
+            {
+                var service = new AttributeValueService( rockContext );
+                return service.Queryable( "Attribute" )
+                    .Where( v => v.Attribute.EntityTypeId == ministrySafeEntityType.Id )
+                    .ToList();
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the setting value.
+        /// </summary>
+        /// <param name="values">The values.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="encryptedValue">if set to <c>true</c> [encrypted value].</param>
+        /// <returns>System.String.</returns>
+        public static string GetSettingValue( List<AttributeValue> values, string key, bool encryptedValue = false )
+        {
+            string value = values
+                .Where( v => v.AttributeKey == key )
+                .Select( v => v.Value )
+                .FirstOrDefault();
+            if ( encryptedValue && !string.IsNullOrWhiteSpace( value ) )
+            {
+                try
+                { value = Encryption.DecryptString( value ); }
+                catch { }
+            }
+
+            return value;
+        }
+
+
+
+        /// <summary>
+        /// Sets the setting value.
+        /// </summary>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="values">The values.</param>
+        /// <param name="key">The key.</param>
+        /// <param name="value">The value.</param>
+        public static void SetSettingValue( RockContext rockContext, List<AttributeValue> values, string key, string value, bool encryptValue = false )
+        {
+            if ( encryptValue && !string.IsNullOrWhiteSpace( value ) )
+            {
+                try
+                { value = Encryption.EncryptString( value ); }
+                catch { }
+            }
+
+            var attributeValue = values
+                .Where( v => v.AttributeKey == key )
+                .FirstOrDefault();
+            if ( attributeValue != null )
+            {
+                attributeValue.Value = value;
+            }
+            else
+            {
+                var ministrySafeEntityType = EntityTypeCache.Get( typeof( com.bemaservices.MinistrySafe.MinistrySafe ) );
+                if ( ministrySafeEntityType != null )
+                {
+                    var attribute = new AttributeService( rockContext )
+                        .Queryable()
+                        .Where( a =>
+                            a.EntityTypeId == ministrySafeEntityType.Id &&
+                            a.Key == key
+                        )
+                        .FirstOrDefault();
+
+                    if ( attribute != null )
+                    {
+                        attributeValue = new AttributeValue();
+                        new AttributeValueService( rockContext ).Add( attributeValue );
+                        attributeValue.AttributeId = attribute.Id;
+                        attributeValue.Value = value;
+                        attributeValue.EntityId = 0;
+                    }
+                }
+            }
         }
 
         #endregion

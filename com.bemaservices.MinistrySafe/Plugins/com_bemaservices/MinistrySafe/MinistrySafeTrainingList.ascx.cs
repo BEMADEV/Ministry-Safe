@@ -85,10 +85,10 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         /// <param name="e">The <see cref="EventArgs" /> instance containing the event data.</param>
         protected void fUser_ApplyFilterClick( object sender, EventArgs e )
         {
-            fUser.SaveUserPreference( "First Name", tbFirstName.Text );
-            fUser.SaveUserPreference( "Last Name", tbLastName.Text );
-            fUser.SaveUserPreference( "Request Date Range", drpRequestDates.DelimitedValues );
-            fUser.SaveUserPreference( "Completed Date Range", drpResponseDates.DelimitedValues );
+            fUser.SetFilterPreference( "First Name", tbFirstName.Text );
+            fUser.SetFilterPreference( "Last Name", tbLastName.Text );
+            fUser.SetFilterPreference( "Request Date Range", drpRequestDates.DelimitedValues );
+            fUser.SetFilterPreference( "Completed Date Range", drpResponseDates.DelimitedValues );
 
             BindGrid();
         }
@@ -187,10 +187,10 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         /// </summary>
         private void BindFilter()
         {
-            tbFirstName.Text = fUser.GetUserPreference( "First Name" );
-            tbLastName.Text = fUser.GetUserPreference( "Last Name" );
-            drpRequestDates.DelimitedValues = fUser.GetUserPreference( "Request Date Range" );
-            drpResponseDates.DelimitedValues = fUser.GetUserPreference( "Completed Date Range" );
+            tbFirstName.Text = fUser.GetFilterPreference( "First Name" );
+            tbLastName.Text = fUser.GetFilterPreference( "Last Name" );
+            drpRequestDates.DelimitedValues = fUser.GetFilterPreference( "Request Date Range" );
+            drpResponseDates.DelimitedValues = fUser.GetFilterPreference( "Completed Date Range" );
         }
 
         /// <summary>
@@ -209,7 +209,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                         g.ForeignId == 2 || g.ForeignId == 3 || g.ForeignId == 4 );
 
                 // FirstName
-                string firstName = fUser.GetUserPreference( "First Name" );
+                string firstName = fUser.GetFilterPreference( "First Name" );
                 if ( !string.IsNullOrWhiteSpace( firstName ) )
                 {
                     qry = qry.Where( t =>
@@ -218,7 +218,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                 }
 
                 // LastName
-                string lastName = fUser.GetUserPreference( "Last Name" );
+                string lastName = fUser.GetFilterPreference( "Last Name" );
                 if ( !string.IsNullOrWhiteSpace( lastName ) )
                 {
                     qry = qry.Where( t =>
@@ -227,7 +227,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
 
                 // Request Date Range
                 var drpRequestDates = new DateRangePicker();
-                drpRequestDates.DelimitedValues = fUser.GetUserPreference( "Request Date Range" );
+                drpRequestDates.DelimitedValues = fUser.GetFilterPreference( "Request Date Range" );
                 if ( drpRequestDates.LowerValue.HasValue )
                 {
                     qry = qry.Where( t => t.RequestDate >= drpRequestDates.LowerValue.Value );
@@ -241,7 +241,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
 
                 // Response Date Range
                 var drpResponseDates = new DateRangePicker();
-                drpResponseDates.DelimitedValues = fUser.GetUserPreference( "Completed Date Range" );
+                drpResponseDates.DelimitedValues = fUser.GetFilterPreference( "Completed Date Range" );
                 if ( drpResponseDates.LowerValue.HasValue )
                 {
                     qry = qry.Where( t => t.CompletedDateTime >= drpResponseDates.LowerValue.Value );
