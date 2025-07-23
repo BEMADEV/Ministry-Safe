@@ -1683,9 +1683,10 @@ namespace com.bemaservices.MinistrySafe
                 ministrySafeUser.RequestDate = createdDateTime ?? RockDateTime.Now;
                 ministrySafeUser.UserId = userId.AsInteger();
                 rockContext.SaveChanges();
+                ministrySafeUser = ministrySafeUserService.Get(ministrySafeUser.Guid);
+
                 ministrySafeUsers.Add( ministrySafeUser );
             }
-
 
             foreach ( var ministrySafeUser in ministrySafeUsers )
             {
@@ -1704,7 +1705,7 @@ namespace com.bemaservices.MinistrySafe
                 if ( workflow == null && workflowTypeCache != null )
                 {
                     // Add Workflow                    
-                    workflow = Rock.Model.Workflow.Activate( workflowTypeCache, ministrySafeUser.PersonAlias.Person.FullName );
+                    workflow = Rock.Model.Workflow.Activate( workflowTypeCache, ministrySafeUser?.PersonAlias?.Person?.FullName );
                     workflowService.Add( workflow );
                     rockContext.SaveChanges();
                     ministrySafeUser.WorkflowId = workflow.Id;
