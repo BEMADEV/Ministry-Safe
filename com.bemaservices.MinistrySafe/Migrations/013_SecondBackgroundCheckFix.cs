@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using com.bemaservices.MinistrySafe.Constants;
 using Rock.Plugin;
 
 namespace com.bemaservices.MinistrySafe.Migrations
@@ -42,9 +43,8 @@ namespace com.bemaservices.MinistrySafe.Migrations
 
         private void AddEnableDebuggingAttribute()
         {
-            //throw new NotImplementedException();
+            RockMigrationHelper.AddOrUpdateEntityAttribute( "com.bemaservices.MinistrySafe.MinistrySafe", Rock.SystemGuid.FieldType.BOOLEAN, "", "", "Enable Debugging?", "Enable Debugging?", "", 2, "false", "9C7EF0A1-D3BD-42CC-B9B4-E5ED7940DD12", MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING );
         }
-
 
         /// <summary>
         /// Updates the type of the background check workflow.
@@ -55,7 +55,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
 
             Sql( @"
                     Delete
-                    From WorkflowAction wa
+                    From WorkflowAction
                     Where ActionTypeId in (
                         Select wat.Id
                         From WorkflowActionType wat
