@@ -1754,7 +1754,6 @@ namespace com.bemaservices.MinistrySafe
             }
 
             var latestUser = ministrySafeUsers.FirstOrDefault();
-            LogMessageToDebuggingInteraction( interactionId, String.Format( "Using User Id {0} with CompletedDateTime {1} as Latest User", latestUser.Id, latestUser.CompletedDateTime ) );
             ministrySafeUsers = ministrySafeUsers.Where( m => m.CompletedDateTime == null
                     )
                 .ToList();
@@ -1766,6 +1765,8 @@ namespace com.bemaservices.MinistrySafe
                 // Is it older than the most recent completed one?
                 if ( latestUser != null )
                 {
+                    LogMessageToDebuggingInteraction( interactionId, String.Format( "Using User Id {0} with CompletedDateTime {1} as Latest User", latestUser.Id, latestUser.CompletedDateTime ) );
+
                     var existingDateTime = DateTime.Parse( latestUser.CompletedDateTime.Value.ToShortDateTimeString() );
                     var importedDateTime = DateTime.Parse( completedDateTime.ToShortDateTimeString() );
                     int dateCompareResult = DateTime.Compare( existingDateTime, importedDateTime );
