@@ -933,10 +933,25 @@ namespace com.bemaservices.MinistrySafe
                 return false;
             }
 
+            string rawUserType = null;
             DefinedValueCache userTypeDefinedValue = DefinedValueCache.Get( pkgTypeDefinedValue.GetAttributeValue( "MinistrySafeUserType" ).AsGuid() );
             if ( userTypeDefinedValue != null )
             {
-                userType = userTypeDefinedValue.Value;
+                rawUserType = userTypeDefinedValue.Value;
+            }
+
+            var formattedUserType = rawUserType.ToLower().Trim();
+            if ( formattedUserType == "employee" || formattedUserType == "volunteer" )
+            {
+                userType = formattedUserType;
+            }
+            else if ( pkgTypeDefinedValue.Value.ToLower().Contains( "employee" ) )
+            {
+                userType = "employee";
+            }
+            else if ( pkgTypeDefinedValue.Value.ToLower().Contains( "volunteer" ) )
+            {
+                userType = "volunteer";
             }
 
             level = pkgTypeDefinedValue.GetAttributeValue( "MinistrySafePackageLevel" );
