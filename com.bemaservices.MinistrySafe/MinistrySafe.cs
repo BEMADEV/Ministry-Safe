@@ -654,6 +654,10 @@ namespace com.bemaservices.MinistrySafe
                             recommendation = "Candidate Review";
                             reportStatus = "Review";
                             break;
+                        case "ready":
+                            recommendation = "Candidate Review";
+                            reportStatus = "Review";
+                            break;
                         case "suspended":
                             recommendation = "Report Suspended";
                             break;
