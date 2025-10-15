@@ -182,12 +182,17 @@ namespace com.bemaservices.MinistrySafe
                     }
 
                     string requestId;
-                    if ( !CreateBackgroundCheck( userId, level, packageCode, userType, childServing, over13, salaryRange, out requestId, errorMessages ) )
+                    string applicantInterfaceUrl;
+                    if ( !CreateBackgroundCheck( userId, level, packageCode, userType, childServing, over13, salaryRange, out requestId, out applicantInterfaceUrl, errorMessages ) )
                     {
                         errorMessages.Add( "Unable to create background check." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
                         UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
+                    }
+                    else
+                    {
+                        UpdateWorkflowApplicantInterfaceUrl( workflow, rockContext, applicantInterfaceUrl );
                     }
 
                     using ( var newRockContext = new RockContext() )
@@ -752,6 +757,21 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="workflow">The workflow.</param>
         /// <param name="rockContext">The rock context.</param>
         /// <param name="requestStatus">The request status.</param>
+        private void UpdateWorkflowApplicantInterfaceUrl( Rock.Model.Workflow workflow, RockContext rockContext, string applicantInterfaceUrl )
+        {
+            if ( SaveAttributeValue( workflow, "ApplicantInterfaceUrl", applicantInterfaceUrl,
+                FieldTypeCache.Get( Rock.SystemGuid.FieldType.TEXT.AsGuid() ), rockContext, null ) )
+            {
+                rockContext.SaveChanges();
+            }
+        }
+
+        /// <summary>
+        /// Sets the workflow RequestStatus attribute.
+        /// </summary>
+        /// <param name="workflow">The workflow.</param>
+        /// <param name="rockContext">The rock context.</param>
+        /// <param name="requestStatus">The request status.</param>
         private void UpdateWorkflowRequestStatus( Rock.Model.Workflow workflow, RockContext rockContext, string requestStatus )
         {
             if ( SaveAttributeValue( workflow, "RequestStatus", requestStatus,
@@ -1206,14 +1226,16 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="requestId">The request identifier.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        public static bool CreateBackgroundCheck( string userId, string level, string packageCode, string userType, bool? childServing, bool? over13, string salaryRange, out string requestId, List<string> errorMessages )
+        public static bool CreateBackgroundCheck( string userId, string level, string packageCode, string userType, bool? childServing, bool? over13, string salaryRange, out string requestId, out string applicantInterfaceUrl, List<string> errorMessages )
         {
             requestId = null;
+            applicantInterfaceUrl = null;
             BackgroundCheckResponse backgroundCheckResponse;
             if ( MinistrySafeApiUtility.CreateBackgroundCheck( userId, level, packageCode, userType, childServing, over13, salaryRange, out backgroundCheckResponse, errorMessages ) )
             {
                 userId = backgroundCheckResponse.UserId.ToString();
                 requestId = backgroundCheckResponse.Id;
+                applicantInterfaceUrl = backgroundCheckResponse.ApplicantInterfaceUrl;
                 return true;
             }
 
