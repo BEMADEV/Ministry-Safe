@@ -314,16 +314,22 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestClient restClient = RestClient();
             RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_USERS_URL, Method.POST );
 
+            var createUserRequest = new CreateUserRequest()
+            {
+                first_name = person.FirstName,
+                last_name = person.LastName,
+                email = person.Email,
+                external_id = "pa" + personAliasId.ToString()
+            };
+
+            if ( userType.IsNotNullOrWhiteSpace() )
+            {
+                createUserRequest.user_type = userType;
+            }
+
             restRequest.AddJsonBody( new
             {
-                user = new CreateUserRequest()
-                {
-                    first_name = person.FirstName,
-                    last_name = person.LastName,
-                    email = person.Email,
-                    external_id = "pa" + personAliasId.ToString(),
-                    user_type = userType
-                },
+                user = createUserRequest,
                 tag_list = tagList
             } );
 

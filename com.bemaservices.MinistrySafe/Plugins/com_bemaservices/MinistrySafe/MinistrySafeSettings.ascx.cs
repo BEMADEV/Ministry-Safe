@@ -285,13 +285,16 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         {
             using ( var rockContext = new RockContext() )
             {
-                var packages = new DefinedValueService( rockContext )
-                    .GetByDefinedTypeGuid( Rock.SystemGuid.DefinedType.BACKGROUND_CHECK_TYPES.AsGuid() )
+                var packageType = new DefinedTypeService( rockContext ).Get( Rock.SystemGuid.DefinedType.BACKGROUND_CHECK_TYPES.AsGuid() );
+                if(packageType != null )
+                {
+                    var packages = packageType.DefinedValues
                     .Where( v => v.ForeignId == 4 && v.IsActive )
                     .Select( v => v.Value.Substring( MinistrySafeConstants.MINISTRYSAFE_TYPENAME_PREFIX.Length ) )
                     .ToList();
 
-                lPackages.Text = packages.AsDelimited( "<br/>" );
+                    lPackages.Text = packages.AsDelimited( "<br/>" );
+                }                
             }
         }
 
@@ -299,13 +302,16 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         {
             using ( var rockContext = new RockContext() )
             {
-                var tags = new DefinedValueService( rockContext )
-                    .GetByDefinedTypeGuid( MinistrySafeSystemGuid.MINISTRYSAFE_TAGS.AsGuid() )
+                var tagType = new DefinedTypeService( rockContext ).Get( MinistrySafeSystemGuid.MINISTRYSAFE_TAGS.AsGuid() );
+                if ( tagType != null )
+                {
+                    var tags = tagType.DefinedValues
                     .Where( v => v.ForeignId == 4 && v.IsActive )
                     .Select( v => v.Value )
                     .ToList();
 
-                lTags.Text = tags.AsDelimited( "<br/>" );
+                    lTags.Text = tags.AsDelimited( "<br/>" );
+                }
             }
         }
 
@@ -313,13 +319,16 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         {
             using ( var rockContext = new RockContext() )
             {
-                var surveyTypes = new DefinedValueService( rockContext )
-                    .GetByDefinedTypeGuid( MinistrySafeSystemGuid.MINISTRYSAFE_SURVEY_TYPES.AsGuid() )
+                var surveyType = new DefinedTypeService( rockContext ).Get( MinistrySafeSystemGuid.MINISTRYSAFE_SURVEY_TYPES.AsGuid() );
+                if ( surveyType != null )
+                {
+                    var surveyTypes = surveyType.DefinedValues
                     .Where( v => v.IsActive )
                     .Select( v => v.Value )
                     .ToList();
 
-                lSurveyTypes.Text = surveyTypes.AsDelimited( "<br/>" );
+                    lSurveyTypes.Text = surveyTypes.AsDelimited( "<br/>" );
+                }                               
             }
         }
 
