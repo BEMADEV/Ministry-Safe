@@ -1057,62 +1057,65 @@ namespace com.bemaservices.MinistrySafe
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public static bool UpdateSurveyTypes( List<string> errorMessages )
         {
-            List<string> surveyTypeResponseList;
+            List<SurveyCodeResponse> surveyCodeResponseList;
 
-            if ( !MinistrySafeApiUtility.GetSurveyTypes( out surveyTypeResponseList, errorMessages ) )
+            if ( !MinistrySafeApiUtility.GetSurveyCodes( out surveyCodeResponseList, errorMessages ) )
             {
                 //return false;
             }
 
-            if ( surveyTypeResponseList == null )
+            if ( surveyCodeResponseList == null )
             {
-                surveyTypeResponseList = new List<string>();
+                surveyCodeResponseList = new List<SurveyCodeResponse>();
             }
 
-            List<DefinedValue> surveyTypes;
+            List<DefinedValue> definedValueList;
             using ( var rockContext = new RockContext() )
             {
                 var definedType = DefinedTypeCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_SURVEY_TYPES.AsGuid() );
 
                 DefinedValueService definedValueService = new DefinedValueService( rockContext );
-                surveyTypes = definedValueService
+                definedValueList = definedValueService
                     .GetByDefinedTypeGuid( definedType.Guid )
                     //.Where( v => v.ForeignId == 4 )
                     .ToList();
-                var surveyTypeNames = surveyTypes.Select( dv => dv.Value ).ToList();
 
-                foreach ( var surveyTypeResponse in surveyTypeResponseList )
+                // First, mark all existing codes as inactive
+                foreach ( var definedValue in definedValueList )
                 {
-                    if ( !surveyTypeNames.Contains( surveyTypeResponse ) )
-                    {
-                        DefinedValue definedValue = null;
+                    definedValue.IsActive = false;
+                }
 
+                foreach ( var surveyCodeResponse in surveyCodeResponseList )
+                {
+                    var definedValue = definedValueList
+                        .Where( dv => dv.Value == surveyCodeResponse.Name )
+                        .FirstOrDefault();
+                    if ( definedValue == null )
+                    {
                         definedValue = new DefinedValue()
                         {
                             IsActive = true,
                             DefinedTypeId = definedType.Id,
                             ForeignId = 4,
-                            Value = surveyTypeResponse,
-                            Description = surveyTypeResponse
+                            Value = surveyCodeResponse.Name
                         };
 
                         definedValueService.Add( definedValue );
-
                         rockContext.SaveChanges();
                     }
-                }
 
-                foreach ( var surveyType in surveyTypes )
-                {
-                    if ( surveyTypeResponseList.Contains( surveyType.Value ) )
-                    {
-                        surveyType.IsActive = true;
-                        surveyType.ForeignId = 4;
-                    }
-                    else
-                    {
-                        surveyType.IsActive = false;
-                    }
+                    definedValue.IsActive = true;
+                    definedValue.ForeignId = 4;
+                    definedValue.Description = surveyCodeResponse.Description;
+
+                    definedValue.LoadAttributes( rockContext );
+
+                    definedValue.SetAttributeValue( "Code", surveyCodeResponse.Code );
+                    definedValue.SetAttributeValue( "Price", surveyCodeResponse.Price );
+                    definedValue.SetAttributeValue( "Type", surveyCodeResponse.Type );
+
+                    definedValue.SaveAttributeValues( rockContext );
                 }
 
                 rockContext.SaveChanges();

@@ -95,6 +95,7 @@
     <Compile Include="Migrations\001_Data.cs" />
     <Compile Include="Migrations\009_UserTagsAndImportJobs.cs" />
     <Compile Include="MinistrySafeApi\BackgroundCheckWebhook.cs" />
+    <Compile Include="MinistrySafeApi\SurveyCodeResponse.cs" />
     <Compile Include="MinistrySafeApi\TagResponse.cs" />
     <Compile Include="MinistrySafeApi\PackageResponse.cs" />
     <Compile Include="MinistrySafe.cs" />
