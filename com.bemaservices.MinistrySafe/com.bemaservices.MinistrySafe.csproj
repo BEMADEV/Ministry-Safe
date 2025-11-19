@@ -82,6 +82,7 @@
     <Compile Include="Jobs\ImportBackgroundChecks.cs" />
     <Compile Include="Jobs\ImportTrainings.cs" />
     <Compile Include="Migrations\011_FluidFixes.cs" />
+    <Compile Include="Migrations\014_SurveyCodeUpdates.cs" />
     <Compile Include="Migrations\013_SecondBackgroundCheckFix.cs" />
     <Compile Include="Migrations\012_RequestLauncher.cs" />
     <Compile Include="Migrations\010_AdditionalTrainingTypes.cs" />

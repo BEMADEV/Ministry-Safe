@@ -1432,8 +1432,8 @@ namespace com.bemaservices.MinistrySafe
                         return true;
                     }
 
-                    string surveyTypeName;
-                    if ( !GetSurveyTypeName( rockContext, workflow, surveyTypeAttribute, out surveyTypeName, errorMessages ) )
+                    string surveyTypeCode;
+                    if ( !GetSurveyTypeCode( rockContext, workflow, surveyTypeAttribute, out surveyTypeCode, errorMessages ) )
                     {
                         errorMessages.Add( "Unable to get Survey Type." );
                         UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
@@ -1463,7 +1463,7 @@ namespace com.bemaservices.MinistrySafe
                         return true;
                     }
 
-                    if ( !AssignTraining( userId, surveyTypeName, errorMessages ) )
+                    if ( !AssignTraining( userId, surveyTypeCode, errorMessages ) )
                     {
                         errorMessages.Add( "Unable to assign training." );
                         UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
@@ -1488,7 +1488,7 @@ namespace com.bemaservices.MinistrySafe
 
                         ministrySafeUser.PersonAliasId = personAliasId.Value;
                         ministrySafeUser.ForeignId = 4;
-                        ministrySafeUser.SurveyCode = surveyTypeName;
+                        ministrySafeUser.SurveyCode = surveyTypeCode;
                         ministrySafeUser.UserType = userTypeName;
                         ministrySafeUser.RequestDate = RockDateTime.Now;
                         ministrySafeUser.DirectLoginUrl = directLoginUrl;
@@ -2016,9 +2016,9 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="packageName">Name of the package.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        private bool GetSurveyTypeName( RockContext rockContext, Rock.Model.Workflow workflow, AttributeCache surveyTypeAttribute, out string packageName, List<string> errorMessages )
+        private bool GetSurveyTypeCode( RockContext rockContext, Rock.Model.Workflow workflow, AttributeCache surveyTypeAttribute, out string surveyCode, List<string> errorMessages )
         {
-            packageName = null;
+            surveyCode = null;
             if ( surveyTypeAttribute == null )
             {
                 errorMessages.Add( "The 'MinistrySafe' provider requires a survey type." );
@@ -2039,7 +2039,13 @@ namespace com.bemaservices.MinistrySafe
                 return false;
             }
 
-            packageName = surveyTypeDefinedValue.Value;
+            surveyCode = surveyTypeDefinedValue.GetAttributeValue("Code");
+
+            if ( surveyCode.IsNullOrWhiteSpace() )
+            {
+                surveyCode = surveyTypeDefinedValue.Value;
+            }
+
             return true;
         }
 
