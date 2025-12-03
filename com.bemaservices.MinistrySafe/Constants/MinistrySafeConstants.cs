@@ -60,7 +60,7 @@ namespace com.bemaservices.MinistrySafe.Constants
         /// <summary>
         /// The ministrysafe tags URL
         /// </summary>
-        public const string MINISTRYSAFE_SURVEY_TYPES_URL = "v2/survey_types";
+        public const string MINISTRYSAFE_SURVEY_CODES_URL = "v2/survey_codes";
 
         /// <summary>
         /// The ministrysafe trainings URL
