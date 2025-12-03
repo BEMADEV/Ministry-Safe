@@ -82,6 +82,7 @@
     <Compile Include="Jobs\ImportBackgroundChecks.cs" />
     <Compile Include="Jobs\ImportTrainings.cs" />
     <Compile Include="Migrations\011_FluidFixes.cs" />
+    <Compile Include="Migrations\014_SurveyCodeUpdates.cs" />
     <Compile Include="Migrations\013_SecondBackgroundCheckFix.cs" />
     <Compile Include="Migrations\012_RequestLauncher.cs" />
     <Compile Include="Migrations\010_AdditionalTrainingTypes.cs" />
@@ -95,6 +96,7 @@
     <Compile Include="Migrations\001_Data.cs" />
     <Compile Include="Migrations\009_UserTagsAndImportJobs.cs" />
     <Compile Include="MinistrySafeApi\BackgroundCheckWebhook.cs" />
+    <Compile Include="MinistrySafeApi\SurveyCodeResponse.cs" />
     <Compile Include="MinistrySafeApi\TagResponse.cs" />
     <Compile Include="MinistrySafeApi\PackageResponse.cs" />
     <Compile Include="MinistrySafe.cs" />

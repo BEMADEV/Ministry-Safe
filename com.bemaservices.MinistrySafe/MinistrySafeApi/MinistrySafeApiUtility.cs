@@ -268,11 +268,11 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="getTagsResponse">The get tags response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal static bool GetSurveyTypes( out List<string> getSurveyTypesResponse, List<string> errorMessages )
+        internal static bool GetSurveyCodes( out List<SurveyCodeResponse> getSurveyCodesResponse, List<string> errorMessages )
         {
-            getSurveyTypesResponse = null;
+            getSurveyCodesResponse = null;
             RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_SURVEY_TYPES_URL );
+            RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_SURVEY_CODES_URL );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
             if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
@@ -283,14 +283,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             if ( restResponse.StatusCode != HttpStatusCode.OK )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Survey Types: " + restResponse.Content );
+                errorMessages.Add( "Failed to get MinistrySafe Survey Codes: " + restResponse.Content );
                 return false;
             }
 
-            getSurveyTypesResponse = JsonConvert.DeserializeObject<List<string>>( restResponse.Content );
-            if ( getSurveyTypesResponse == null )
+            getSurveyCodesResponse = JsonConvert.DeserializeObject<List<SurveyCodeResponse>>( restResponse.Content );
+            if ( getSurveyCodesResponse == null )
             {
-                errorMessages.Add( "Get Survey Types is not valid: " + restResponse.Content );
+                errorMessages.Add( "Get Survey Codes is not valid: " + restResponse.Content );
                 return false;
             }
 

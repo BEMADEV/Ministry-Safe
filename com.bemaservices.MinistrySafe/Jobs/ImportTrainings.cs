@@ -72,7 +72,7 @@ namespace com.bemaservices.MinistrySafe.Jobs
             var ministrySafe = new MinistrySafe();
             ministrySafe.ImportTrainings( dateRange, workflowType, out trainingsProcessed, out errorMessages );
 
-            this.Result += string.Format( "{0} trainings processed{1}", trainingsProcessed, ( errorMessages.Count > 0 ) ? ", but " + errorMessages.Count + " errors were reported" : string.Empty );
+            this.Result += string.Format( "{0} trainings processed{1}", trainingsProcessed, ( errorMessages.Count > 0 ) ? ", but " + errorMessages.Count + " errors were reported:<br/><ul>" + errorMessages.Select(em=> "<li>"+em+"</li>").ToList().AsDelimited("")+"</ul>" : string.Empty );
         }
     }
 }
