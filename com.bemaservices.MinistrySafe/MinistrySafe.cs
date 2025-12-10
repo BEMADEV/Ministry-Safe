@@ -1527,6 +1527,98 @@ namespace com.bemaservices.MinistrySafe
             }
         }
 
+        public bool RefreshTraining( RockContext rockContext, Rock.Model.Workflow workflow,
+                 AttributeCache personAttribute, AttributeCache directLoginUrlAttribute,
+                 out List<string> errorMessages )
+        {
+            errorMessages = new List<string>();
+
+            try
+            {
+                // Check to make sure workflow is not null
+                if ( workflow == null )
+                {
+                    errorMessages.Add( "The 'MinistrySafe' provider requires a valid workflow." );
+                    UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
+                    return true;
+                }
+
+                // Lock the workflow until we're finished saving so the webhook can't start working on it.
+                var lockObject = _lockObjects.GetOrAdd( workflow.Id, new object() );
+                lock ( lockObject )
+                {
+                    Person person;
+                    int? personAliasId;
+                    if ( !GetPerson( rockContext, workflow, personAttribute, out person, out personAliasId, errorMessages ) )
+                    {
+                        errorMessages.Add( "Unable to get Person." );
+                        UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
+                        return true;
+                    }
+
+                    UserResponse userResponse;
+                    if ( !MinistrySafeApiUtility.GetUser( workflow, person, personAliasId.Value, out userResponse, errorMessages ) )
+                    {
+                        errorMessages.Add( "Unable to get User." );
+                        UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
+                        return true;
+                    }
+
+                    string trainingLink;
+                    if ( !RefreshTraining( userResponse.Id, out trainingLink, errorMessages ) )
+                    {
+                        errorMessages.Add( "Unable to refresh training link." );
+                        UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
+                        return true;
+                    }
+
+                    using ( var newRockContext = new RockContext() )
+                    {
+                        var ministrySafeUserService = new MinistrySafeUserService( newRockContext );
+                        var ministrySafeUser = ministrySafeUserService.Queryable()
+                                .Where( c =>
+                                    c.WorkflowId.HasValue &&
+                                    c.WorkflowId.Value == workflow.Id )
+                                .FirstOrDefault();
+
+                        if ( ministrySafeUser != null )
+                        {
+                            ministrySafeUser.DirectLoginUrl = trainingLink;
+                            newRockContext.SaveChanges();
+                        }
+                    }
+
+                    UpdateWorkflowTrainingStatus( workflow, rockContext, "SUCCESS" );
+
+                    if ( SaveAttributeValue( workflow, directLoginUrlAttribute.Key, trainingLink,
+                        FieldTypeCache.Get( Rock.SystemGuid.FieldType.TEXT.AsGuid() ), rockContext, null ) )
+                    {
+                        rockContext.SaveChanges();
+                    }
+
+                    if ( workflow.IsPersisted )
+                    {
+                        // Make sure the AttributeValues are saved to the database immediately because the MinistrySafe WebHook
+                        // (which might otherwise get called before they are saved by the workflow processing) needs to
+                        // have the correct attribute values.
+                        workflow.SaveAttributeValues( rockContext );
+                    }
+
+                    _lockObjects.TryRemove( workflow.Id, out _ ); // we no longer need that lock for this workflow
+                }
+
+                return true;
+
+            }
+            catch ( Exception ex )
+            {
+                Rock.Model.ExceptionLogService.LogException( ex, null );
+                errorMessages.Add( ex.Message );
+                UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
+                return true;
+            }
+        }
+
         /// <summary>
         /// Updates the workflow, closing it if the reportStatus is blank and the recommendation is "Invitation Expired".
         /// </summary>
@@ -2097,6 +2189,26 @@ namespace com.bemaservices.MinistrySafe
             if ( MinistrySafeApiUtility.AssignTraining( candidateId, surveyCode, out assignTrainingResponse, errorMessages ) )
             {
                 candidateId = assignTrainingResponse.Id;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Creates the invitation.
+        /// </summary>
+        /// <param name="candidateId">The candidate identifier.</param>
+        /// <param name="surveyCode">The survey code.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns>True/False value of whether the request was successfully sent or not.</returns>
+        public static bool RefreshTraining( string candidateId, out string trainingLink, List<string> errorMessages )
+        {
+            trainingLink = null;
+            RefreshTrainingResponse refreshTrainingResponse;
+            if ( MinistrySafeApiUtility.RefreshTraining( candidateId, out refreshTrainingResponse, errorMessages ) )
+            {
+                trainingLink = refreshTrainingResponse.TrainingLink;
                 return true;
             }
 
