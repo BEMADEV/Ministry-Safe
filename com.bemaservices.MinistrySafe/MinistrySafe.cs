@@ -341,12 +341,6 @@ namespace com.bemaservices.MinistrySafe
                             new Dictionary<string, string> { { "ispassword", "false" } } ) )
                         {
                         }
-
-                        if ( reportStatus.IsNullOrWhiteSpace() && ( recommendation == "Invitation Expired" || recommendation == "Cancelled" ) )
-                        {
-                            workflow.CompletedDateTime = RockDateTime.Now;
-                            workflow.MarkComplete( recommendation );
-                        }
                     }
 
                     // Save the report link
@@ -620,7 +614,7 @@ namespace com.bemaservices.MinistrySafe
                     backgroundCheck.Status = status;
                     if ( backgroundCheck.Status.IsNullOrWhiteSpace() )
                     {
-                        backgroundCheck.Status = "consider";
+                        backgroundCheck.Status = "ready";
                     }
 
                     if ( tazworkFlagged != null && tazworkFlagged != true )
@@ -646,48 +640,40 @@ namespace com.bemaservices.MinistrySafe
 
                     string recommendation = null;
                     string reportStatus = null; //Pass,Fail,Review
-                    switch ( backgroundCheck.Status )
+                    if ( BackgroundCheckStatuses.AWAITING_APPLICANT.Contains( backgroundCheck.Status ) )
                     {
-                        case "pending":
-                            recommendation = "Report Pending";
-                            break;
-                        case "clear":
-                            recommendation = "Candidate Pass";
-                            reportStatus = "Pass";
-                            break;
-                        case "consider":
-                            recommendation = "Candidate Review";
-                            reportStatus = "Review";
-                            break;
-                        case "ready":
-                            recommendation = "Candidate Review";
-                            reportStatus = "Review";
-                            break;
-                        case "suspended":
-                            recommendation = "Report Suspended";
-                            break;
-                        case "dispute":
-                            recommendation = "Report Disputed";
-                            break;
-                        case "InvitationCreated":
-                            recommendation = "Invitation Sent";
-                            break;
-                        case "InvitationCompleted":
-                            recommendation = "Invitation Completed";
-                            break;
-                        case "InvitationExpired":
-                            recommendation = "Invitation Expired";
-                            break;
-                        case "awaiting_applicant":
-                            recommendation = "Awaiting Applicant";
-                            break;
-                        case "complete":
-                            recommendation = "Candidate Review";
-                            reportStatus = "Review";
-                            break;
-                        case "cancelled":
-                            recommendation = "Cancelled";
-                            break;
+                        recommendation = "Awaiting Applicant";
+                    }
+                    else if ( BackgroundCheckStatuses.CANCELLED.Contains( backgroundCheck.Status ) )
+                    {
+                        recommendation = "Cancelled";
+                        reportStatus = "Cancelled";
+                    }
+                    else if ( BackgroundCheckStatuses.COMPLETED_NEEDS_REVIEW.Contains( backgroundCheck.Status ) )
+                    {
+                        recommendation = "Candidate Review";
+                        reportStatus = "Review";
+                    }
+                    else if ( BackgroundCheckStatuses.COMPLETED_CLEARED.Contains( backgroundCheck.Status ) )
+                    {
+                        recommendation = "Candidate Pass";
+                        reportStatus = "Pass";
+                    }
+                    else if ( BackgroundCheckStatuses.DISPUTED.Contains( backgroundCheck.Status ) )
+                    {
+                        recommendation = "Report Disputed";
+                    }
+                    else if ( BackgroundCheckStatuses.ERROR.Contains( backgroundCheck.Status ) )
+                    {
+                        recommendation = "Error";
+                    }
+                    else if ( BackgroundCheckStatuses.PROCESSING.Contains( backgroundCheck.Status ) )
+                    {
+                        recommendation = "Report Processing";
+                    }
+                    else if ( BackgroundCheckStatuses.SUBMITTED.Contains( backgroundCheck.Status ) )
+                    {
+                        recommendation = "Submitted";
                     }
 
                     LogMessageToDebuggingInteraction( interactionId,
@@ -1313,7 +1299,10 @@ namespace com.bemaservices.MinistrySafe
                         var completionDate = getAllBackgroundCheckResponse.CompleteDate.AsDateTime();
                         var orderDate = getAllBackgroundCheckResponse.OrderDate.AsDateTime();
                         var tazworkFlagged = getAllBackgroundCheckResponse.TazworkFlagged;
-                        if ( completionDate.HasValue || getAllBackgroundCheckResponse.Status == "complete" )
+                        if ( completionDate.HasValue ||
+                            BackgroundCheckStatuses.COMPLETED_NEEDS_REVIEW.Contains( status ) ||
+                            BackgroundCheckStatuses.COMPLETED_CLEARED.Contains( status ) ||
+                            BackgroundCheckStatuses.CANCELLED.Contains( status ) )
                         {
                             if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged, workflowType ) )
                             {

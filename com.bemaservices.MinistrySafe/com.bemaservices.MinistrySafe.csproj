@@ -77,12 +77,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Constants\BackgroundCheckStatuses.cs" />
     <Compile Include="Constants\MinistrySafeConstants.cs" />
     <Compile Include="Constants\MinistrySafeSystemGuid.cs" />
     <Compile Include="Jobs\ImportBackgroundChecks.cs" />
     <Compile Include="Jobs\ImportTrainings.cs" />
     <Compile Include="Migrations\011_FluidFixes.cs" />
     <Compile Include="Migrations\014_SurveyCodeUpdates.cs" />
+    <Compile Include="Migrations\015_NewStatuses.cs" />
     <Compile Include="Migrations\013_SecondBackgroundCheckFix.cs" />
     <Compile Include="Migrations\012_RequestLauncher.cs" />
     <Compile Include="Migrations\010_AdditionalTrainingTypes.cs" />
