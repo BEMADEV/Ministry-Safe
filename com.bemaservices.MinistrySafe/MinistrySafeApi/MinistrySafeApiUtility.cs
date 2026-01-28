@@ -486,6 +486,36 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        internal static bool RefreshTraining( string candidateId, out RefreshTrainingResponse refreshTrainingResponse, List<string> errorMessages )
+        {
+            refreshTrainingResponse = null;
+            RestClient restClient = RestClient();
+            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}/refresh_training_link", MinistrySafeConstants.MINISTRYSAFE_USERS_URL, candidateId ), Method.POST );
+
+            IRestResponse restResponse = restClient.Execute( restRequest );
+
+            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            {
+                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
+                return false;
+            }
+
+            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            {
+                errorMessages.Add( "Failed to refresh MinistrySafe Training link: " + restResponse.Content );
+                return false;
+            }
+
+            refreshTrainingResponse = JsonConvert.DeserializeObject<RefreshTrainingResponse>( restResponse.Content );
+            if ( refreshTrainingResponse == null )
+            {
+                errorMessages.Add( "Refresh Training Response is not valid: " + restResponse.Content );
+                return false;
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// Gets all trainings.
         /// </summary>
