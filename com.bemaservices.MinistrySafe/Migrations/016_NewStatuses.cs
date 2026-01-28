@@ -133,6 +133,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.UpdateEntityType( "Rock.Workflow.Action.AssignActivityToGroup", "DB2D8C44-6E57-4B45-8973-5DE327D61554", false, true );
             RockMigrationHelper.UpdateEntityType( "Rock.Workflow.Action.AssignActivityToSecurityRole", "08189B3F-B506-45E8-AA68-99EC51085CF3", false, true );
             RockMigrationHelper.UpdateEntityType( "Rock.Workflow.Action.BackgroundCheckRequest", "C4DAE3D6-931F-497F-AC00-60BAFA87B758", false, true );
+            RockMigrationHelper.UpdateEntityType( "Rock.Workflow.Action.CompleteActivity", "0D5E33A5-8700-4168-A42E-74D78B62D717", false, true );
             RockMigrationHelper.UpdateEntityType( "Rock.Workflow.Action.CompleteWorkflow", "EEDA4318-F014-4A46-9C76-4C052EF81AA1", false, true );
             RockMigrationHelper.UpdateEntityType( "Rock.Workflow.Action.Delay", "D22E73F7-86E2-46CA-AD5B-7770A866726B", false, true );
             RockMigrationHelper.UpdateEntityType( "Rock.Workflow.Action.DeleteWorkflow", "0E79AF40-4FB0-49D7-AB0E-E95BD828C62D", false, true );
