@@ -85,7 +85,7 @@
     <Compile Include="Migrations\011_FluidFixes.cs" />
     <Compile Include="Migrations\015_AddTrainingLinkRefresh.cs" />
     <Compile Include="Migrations\014_SurveyCodeUpdates.cs" />
-    <Compile Include="Migrations\015_NewStatuses.cs" />
+    <Compile Include="Migrations\016_NewStatuses.cs" />
     <Compile Include="Migrations\013_SecondBackgroundCheckFix.cs" />
     <Compile Include="Migrations\012_RequestLauncher.cs" />
     <Compile Include="Migrations\010_AdditionalTrainingTypes.cs" />

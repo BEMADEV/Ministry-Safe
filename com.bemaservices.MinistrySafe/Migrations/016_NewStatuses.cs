@@ -29,7 +29,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
     /// Implements the <see cref="Migration" />
     /// </summary>
     /// <seealso cref="Migration" />
-    [MigrationNumber( 15, "1.16.0" )]
+    [MigrationNumber( 16, "1.16.0" )]
     public partial class NewStatuses : Migration
     {
         /// <summary>
