@@ -48,8 +48,6 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.UpdateAttributeQualifier( "39A5D0FF-BA35-4CA1-B8DD-1FB40F4660E9", "displaydescription", @"False", "9F879C77-8960-4D70-B849-BF0A25BFD191" ); // MinistrySafe Request Launcher:Trainings:displaydescription
             RockMigrationHelper.UpdateAttributeQualifier( "05E50A5A-DFB8-4656-9210-9027565D7864", "displaydescription", @"False", "FD10024C-D776-4F05-B535-F67026DD5C67" ); // Person Attribute
 
-            List<string> errorMessages = new List<string>();
-            MinistrySafe.UpdateSurveyTypes( errorMessages );
         }
 
 
