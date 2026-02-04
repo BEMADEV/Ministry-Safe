@@ -2120,6 +2120,7 @@ namespace com.bemaservices.MinistrySafe
                 return false;
             }
 
+            surveyTypeDefinedValue.LoadAttributes();
             surveyCode = surveyTypeDefinedValue.GetAttributeValue("Code");
 
             if ( surveyCode.IsNullOrWhiteSpace() )
