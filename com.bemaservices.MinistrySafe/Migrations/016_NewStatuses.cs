@@ -39,7 +39,17 @@ namespace com.bemaservices.MinistrySafe.Migrations
         {
             AddDefinedValues();
             UpdateBackgroundCheckWorkflowType();
+            AddPersonAttributes();
             UpdateBadge();
+        }
+
+        private void AddPersonAttributes()
+        {
+            // Person Attribute "Request Initiated Date"
+            RockMigrationHelper.AddOrUpdatePersonAttributeByGuid( @"6B6AA175-4758-453F-8D83-FCD8044B5F36", new List<string> { "4D1E1EBA-ABF2-4A7C-8ADF-65CB5AAE94E2" }, @"Request Initiated Date", @"Request Initiated Date", @"MinistrySafe_RequestInitiatedDate", @"", @"", 15309, "", @"31BBAADD-D121-4B2D-882A-B8DDDE2CE334" );
+
+            // Person Attribute "Request Approved Date"
+            RockMigrationHelper.AddOrUpdatePersonAttributeByGuid( @"6B6AA175-4758-453F-8D83-FCD8044B5F36", new List<string> { "4D1E1EBA-ABF2-4A7C-8ADF-65CB5AAE94E2" }, @"Request Approved Date", @"Request Approved Date", @"MinistrySafe_RequestApprovedDate", @"", @"", 15310, "", @"DFD6B5BC-F509-4E2D-AA10-8C9682EF516B" );
         }
 
         private void UpdateBadge()
