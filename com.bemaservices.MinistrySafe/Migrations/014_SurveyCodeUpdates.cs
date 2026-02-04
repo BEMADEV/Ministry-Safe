@@ -38,7 +38,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
         /// </summary>
         public override void Up()
         {
+            RockMigrationHelper.UpdateWorkflowTypeAttribute( "5876314A-FC4F-4A07-8CA0-A02DE26E55BE", "59D5A94C-94A0-4630-B80A-BB25697D74C7", "Survey Type", "SurveyType", "Value should be the type of MinistrySafe training to request from the vendor.", 9, @"", "FC5D6AD1-5003-4E75-B297-59675444113A", false ); // Awareness Training (MinistrySafe):Survey Type
             RockMigrationHelper.UpdateAttributeQualifier( "FC5D6AD1-5003-4E75-B297-59675444113A", "displaydescription", @"False", "8133162D-3079-4ACD-8D9A-253A1D5F985F" ); // Awareness Training (MinistrySafe):Survey Type:displaydescription
+
             RockMigrationHelper.UpdateAttributeQualifier( "39A5D0FF-BA35-4CA1-B8DD-1FB40F4660E9", "displaydescription", @"False", "9F879C77-8960-4D70-B849-BF0A25BFD191" ); // MinistrySafe Request Launcher:Trainings:displaydescription
             RockMigrationHelper.UpdateAttributeQualifier( "05E50A5A-DFB8-4656-9210-9027565D7864", "displaydescription", @"False", "FD10024C-D776-4F05-B535-F67026DD5C67" ); // Person Attribute
 
