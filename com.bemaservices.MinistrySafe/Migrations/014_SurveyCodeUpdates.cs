@@ -38,6 +38,10 @@ namespace com.bemaservices.MinistrySafe.Migrations
         /// </summary>
         public override void Up()
         {
+            RockMigrationHelper.AddDefinedTypeAttribute( "95EF81D2-C192-4B9E-A7A3-5E1E90BDA3CE", "3EE69CBC-35CE-4496-88CC-8327A447603F", "Price", "Price", "", 2, "", "FAC63431-7DA4-41AB-82CC-257E2BFB9A0E" );
+            RockMigrationHelper.AddDefinedTypeAttribute( "95EF81D2-C192-4B9E-A7A3-5E1E90BDA3CE", "9C204CD0-1233-41C5-818A-C5DA439445AA", "Code", "Code", "", 1, "", "FDFB5F3F-4A2B-435C-972D-C0D3243E2634" );
+            RockMigrationHelper.AddDefinedTypeAttribute( "95EF81D2-C192-4B9E-A7A3-5E1E90BDA3CE", "9C204CD0-1233-41C5-818A-C5DA439445AA", "Type", "Type", "", 0, "", "0368DB7A-CBB2-41DC-9072-F01D4E6776F1" );
+
             RockMigrationHelper.UpdateWorkflowTypeAttribute( "5876314A-FC4F-4A07-8CA0-A02DE26E55BE", "59D5A94C-94A0-4630-B80A-BB25697D74C7", "Survey Type", "SurveyType", "Value should be the type of MinistrySafe training to request from the vendor.", 9, @"", "FC5D6AD1-5003-4E75-B297-59675444113A", false ); // Awareness Training (MinistrySafe):Survey Type
             RockMigrationHelper.UpdateAttributeQualifier( "FC5D6AD1-5003-4E75-B297-59675444113A", "displaydescription", @"False", "8133162D-3079-4ACD-8D9A-253A1D5F985F" ); // Awareness Training (MinistrySafe):Survey Type:displaydescription
 
