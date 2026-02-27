@@ -39,7 +39,17 @@ namespace com.bemaservices.MinistrySafe.Migrations
         {
             AddDefinedValues();
             UpdateBackgroundCheckWorkflowType();
+            AddPersonAttributes();
             UpdateBadge();
+        }
+
+        private void AddPersonAttributes()
+        {
+            // Person Attribute "Request Initiated Date"
+            RockMigrationHelper.AddOrUpdatePersonAttributeByGuid( @"6B6AA175-4758-453F-8D83-FCD8044B5F36", new List<string> { "4D1E1EBA-ABF2-4A7C-8ADF-65CB5AAE94E2" }, @"Request Initiated Date", @"Request Initiated Date", @"MinistrySafe_RequestInitiatedDate", @"", @"", 15309, "", @"31BBAADD-D121-4B2D-882A-B8DDDE2CE334" );
+
+            // Person Attribute "Request Approved Date"
+            RockMigrationHelper.AddOrUpdatePersonAttributeByGuid( @"6B6AA175-4758-453F-8D83-FCD8044B5F36", new List<string> { "4D1E1EBA-ABF2-4A7C-8ADF-65CB5AAE94E2" }, @"Request Approved Date", @"Request Approved Date", @"MinistrySafe_RequestApprovedDate", @"", @"", 15310, "", @"DFD6B5BC-F509-4E2D-AA10-8C9682EF516B" );
         }
 
         private void UpdateBadge()
@@ -250,7 +260,6 @@ namespace com.bemaservices.MinistrySafe.Migrations
 
             #region Background Check
 
-            RockMigrationHelper.UpdateWorkflowType( false, true, "Background Check", "Used to request a background check be performed on a person.", "6F8A431C-BEBD-4D33-AAD6-1D70870329C2", "Request", "fa fa-check-square-o", 0, true, 0, "21637ED6-B25B-4E00-88D4-C42425279D86", 0 ); // Background Check
             RockMigrationHelper.UpdateWorkflowTypeAttribute( "21637ED6-B25B-4E00-88D4-C42425279D86", "9C204CD0-1233-41C5-818A-C5DA439445AA", "Applicant Interface Url", "ApplicantInterfaceUrl", "", 0, @"", "A9EB72AE-D35A-4BFC-A3D6-CA3355FDBE1D", false ); // Background Check:Applicant Interface Url
             RockMigrationHelper.UpdateWorkflowTypeAttribute( "21637ED6-B25B-4E00-88D4-C42425279D86", "99B090AA-4D7E-46D8-B393-BF945EA1BA8B", "Checked Attribute", "CheckedAttribute", "The person attribute that indicates if person has a valid background check (passed)", 1, @"daf87b87-3d1e-463d-a197-52227fe4ea28", "BE394A58-9833-4EF2-9EDB-5675E1C1C2AF", false ); // Background Check:Checked Attribute
             RockMigrationHelper.UpdateWorkflowTypeAttribute( "21637ED6-B25B-4E00-88D4-C42425279D86", "9C204CD0-1233-41C5-818A-C5DA439445AA", "Request Message", "RequestMessage", "", 2, @"", "02980C6E-1F67-458E-B636-85759B3C1061", false ); // Background Check:Request Message
