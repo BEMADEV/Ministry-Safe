@@ -617,7 +617,7 @@ namespace com.bemaservices.MinistrySafe
                         backgroundCheck.Status = "ready";
                     }
 
-                    if ( tazworkFlagged != null && tazworkFlagged != true )
+                    if ( BackgroundCheckStatuses.COMPLETED_NEEDS_REVIEW.Contains( backgroundCheck.Status ) && tazworkFlagged != null && tazworkFlagged != true )
                     {
                         backgroundCheck.Status = "clear";
                     }

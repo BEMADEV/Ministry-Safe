@@ -23,7 +23,8 @@ namespace com.bemaservices.MinistrySafe.Constants
     {
         public static string[] AWAITING_APPLICANT = {
             "billing",
-            "ordered"
+            "ordered",
+            "awaiting_applicant"
         };
 
         public static string[] SUBMITTED = {
