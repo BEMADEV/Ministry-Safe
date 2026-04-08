@@ -1055,15 +1055,86 @@ namespace com.bemaservices.MinistrySafe
                 surveyCodeResponseList = new List<SurveyCodeResponse>();
             }
 
-            List<DefinedValue> definedValueList;
+
             using ( var rockContext = new RockContext() )
             {
-                var definedType = DefinedTypeCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_SURVEY_TYPES.AsGuid() );
+                // Update Step Types
 
+                var stepTypeMapping = new Dictionary<string, Guid>();
+                var stepProgram = StepProgramCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_TRAINING_PROGRAM.AsGuid() );
+                var stepTypeService = new StepTypeService( rockContext );
+                var stepTypeList = stepTypeService.Queryable().Where( st => st.StepProgram.Guid == stepProgram.Guid ).ToList();
+
+                // First, mark all existing codes as inactive
+                foreach ( var stepType in stepTypeList )
+                {
+                    stepType.IsActive = false;
+                }
+
+                foreach ( var surveyCodeResponse in surveyCodeResponseList )
+                {
+                    var stepType = stepTypeList
+                        .Where( st => st.Name == surveyCodeResponse.Name )
+                        .FirstOrDefault();
+                    if ( stepType == null )
+                    {
+                        stepType = new StepType()
+                        {
+                            IsActive = true,
+                            StepProgramId = stepProgram.Id,
+                            ForeignId = 4,
+                            Name = surveyCodeResponse.Name
+                        };
+
+                        stepTypeService.Add( stepType );
+                        rockContext.SaveChanges();
+                    }
+
+                    stepType.IsActive = true;
+                    stepType.ForeignId = 4;
+                    stepType.Description = surveyCodeResponse.Description;
+
+                    stepType.LoadAttributes( rockContext );
+
+                    stepType.SetAttributeValue( "Code", surveyCodeResponse.Code );
+                    stepType.SetAttributeValue( "Price", surveyCodeResponse.Price );
+                    stepType.SetAttributeValue( "Type", surveyCodeResponse.Type );
+
+                    stepType.SaveAttributeValues( rockContext );
+
+                    // Add Score attribute to steps of this step type if it doesn't exist
+                    var stepEntityTypeId = EntityTypeCache.Get( typeof( Step ) ).Id;
+                    var attributeService = new AttributeService( rockContext );
+                    var scoreAttribute = attributeService
+                        .GetByEntityTypeQualifier( stepEntityTypeId, "StepTypeId", stepType.Id.ToString(), true )
+                        .FirstOrDefault( a => a.Key == "Score" );
+
+                    if ( scoreAttribute == null )
+                    {
+                        scoreAttribute = new Rock.Model.Attribute
+                        {
+                            EntityTypeId = stepEntityTypeId,
+                            EntityTypeQualifierColumn = "StepTypeId",
+                            EntityTypeQualifierValue = stepType.Id.ToString(),
+                            Key = "Score",
+                            Name = "Score",
+                            FieldTypeId = FieldTypeCache.Get( Rock.SystemGuid.FieldType.INTEGER.AsGuid() ).Id,
+                            IsRequired = false,
+                            Order = 0
+                        };
+                        attributeService.Add( scoreAttribute );
+                        rockContext.SaveChanges();
+                    }
+
+                    stepTypeMapping.Add( surveyCodeResponse.Code, stepType.Guid );
+                }
+
+                // Update Defined Values
+
+                var definedType = DefinedTypeCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_SURVEY_TYPES.AsGuid() );
                 DefinedValueService definedValueService = new DefinedValueService( rockContext );
-                definedValueList = definedValueService
+                var definedValueList = definedValueService
                     .GetByDefinedTypeGuid( definedType.Guid )
-                    //.Where( v => v.ForeignId == 4 )
                     .ToList();
 
                 // First, mark all existing codes as inactive
@@ -1100,6 +1171,12 @@ namespace com.bemaservices.MinistrySafe
                     definedValue.SetAttributeValue( "Code", surveyCodeResponse.Code );
                     definedValue.SetAttributeValue( "Price", surveyCodeResponse.Price );
                     definedValue.SetAttributeValue( "Type", surveyCodeResponse.Type );
+
+                    var stepTypeGuid = stepTypeMapping.GetValueOrNull( surveyCodeResponse.Code );
+                    if ( stepTypeGuid.HasValue )
+                    {
+                        definedValue.SetAttributeValue( "StepType", stepTypeGuid.ToString() );
+                    }
 
                     definedValue.SaveAttributeValues( rockContext );
                 }
@@ -1682,17 +1759,60 @@ namespace com.bemaservices.MinistrySafe
                         }
                     }
 
-                    // Set the training type if blank
+                    // Set the Step Type if blank
+                    StepType stepType = null;
+                    if ( workflow.GetAttributeValue( "StepType" ).IsNullOrWhiteSpace() && surveyCode.IsNotNullOrWhiteSpace() )
+                    {
+                        var stepProgram = StepProgramCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_TRAINING_PROGRAM.AsGuid() );
+                        if ( stepProgram != null )
+                        {
+                            var stepTypeService = new StepTypeService( rockContext );
+                            stepType = stepTypeService.Queryable()
+                                .Where( st => st.StepProgram.Guid == stepProgram.Guid )
+                                .WhereAttributeValue( rockContext, "Code", surveyCode )
+                                .FirstOrDefault();
+                            if ( stepType != null )
+                            {
+                                var rawValue = string.Format( "{0}|{1}", stepProgram.Guid, stepType.Guid );
+                                SaveAttributeValue( workflow, "StepType", rawValue,
+                                        FieldTypeCache.Get( Rock.SystemGuid.FieldType.STEP_PROGRAM_STEP_TYPE.AsGuid() ), rockContext );
+                            }
+                        }
+                    }
+
+                    // Set the legacy training type attribute if blank
                     if ( workflow.GetAttributeValue( "SurveyType" ).IsNullOrWhiteSpace() && surveyCode.IsNotNullOrWhiteSpace() )
                     {
-                        var definedType = DefinedTypeCache.Get( "95EF81D2-C192-4B9E-A7A3-5E1E90BDA3CE".AsGuid() );
-                        foreach ( var rockPackage in definedType.DefinedValues )
+                        var definedType = DefinedTypeCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_SURVEY_TYPES.AsGuid() );
+                        DefinedValueCache matchingValue = null;
+                        if ( definedType != null )
                         {
-                            if ( rockPackage.Value == surveyCode )
+                            foreach ( var definedValue in definedType.DefinedValues )
                             {
-                                SaveAttributeValue( workflow, "SurveyType", rockPackage.Guid.ToString(),
-                                    FieldTypeCache.Get( Rock.SystemGuid.FieldType.DEFINED_VALUE.AsGuid() ), rockContext );
+                                // First, check for a matching Step Type attribute. This section will overwrite
+                                // anything set by the following section, and will additionally exit out of the loop.
+                                var stepTypeGuid = definedValue.GetAttributeValue( "StepType" ).AsGuidOrNull();
+                                if ( stepTypeGuid != null &&
+                                    stepType != null &&
+                                    stepType.Guid == stepTypeGuid )
+                                {
+                                    matchingValue = definedValue;
+                                    break;
+                                }
+
+                                // If there's no matching step type, check the legacy Code attribute on the defined value 
+                                var definedValueCode = definedValue.GetAttributeValue( "Code" );
+                                if ( definedValueCode == surveyCode )
+                                {
+                                    matchingValue = definedValue;
+                                }
                             }
+                        }
+
+                        if ( matchingValue != null )
+                        {
+                            SaveAttributeValue( workflow, "SurveyType", matchingValue.Guid.ToString(),
+                                        FieldTypeCache.Get( Rock.SystemGuid.FieldType.DEFINED_VALUE.AsGuid() ), rockContext );
                         }
                     }
 
@@ -2121,7 +2241,7 @@ namespace com.bemaservices.MinistrySafe
             }
 
             surveyTypeDefinedValue.LoadAttributes();
-            surveyCode = surveyTypeDefinedValue.GetAttributeValue("Code");
+            surveyCode = surveyTypeDefinedValue.GetAttributeValue( "Code" );
 
             if ( surveyCode.IsNullOrWhiteSpace() )
             {

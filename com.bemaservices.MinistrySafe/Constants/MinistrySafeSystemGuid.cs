@@ -62,6 +62,8 @@ namespace com.bemaservices.MinistrySafe.Constants
         /// </summary>
         public static readonly string MINISTRYSAFE_SURVEY_TYPES = "95EF81D2-C192-4B9E-A7A3-5E1E90BDA3CE";
 
+        public static readonly string MINISTRYSAFE_TRAINING_PROGRAM = "F821FE74-214A-4583-9ECB-FF7B6193F57F";
+
         /// <summary>
         /// The checkr requestlist block
         /// </summary>
