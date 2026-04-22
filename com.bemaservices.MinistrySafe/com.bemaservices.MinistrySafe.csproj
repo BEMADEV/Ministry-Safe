@@ -82,6 +82,7 @@
     <Compile Include="Constants\MinistrySafeSystemGuid.cs" />
     <Compile Include="Jobs\ImportBackgroundChecks.cs" />
     <Compile Include="Jobs\ImportTrainings.cs" />
+    <Compile Include="Jobs\MigrateExistingTrainings.cs" />
     <Compile Include="Jobs\UpdateStepStatuses.cs" />
     <Compile Include="Migrations\011_FluidFixes.cs" />
     <Compile Include="Migrations\017_StepTypes.cs" />
