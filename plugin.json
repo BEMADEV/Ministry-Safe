@@ -4,7 +4,7 @@
         "code": "com.bemaservices"
     },
     "name": "MinistrySafe",
-    "version": "1.12.14",
+    "version": "1.12.15",
     "include": {
         "com.bemaservices.MinistrySafe/bin/Release/net472/com.bemaservices.MinistrySafe.dll": "Bin/",
         "com.bemaservices.MinistrySafe.Obsidian/dist/**": "Plugins/com_bemaservices/MinistrySafe",
