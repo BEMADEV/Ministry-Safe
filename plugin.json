@@ -1,0 +1,14 @@
+{
+    "organization": {
+        "name": "BEMA Software Services",
+        "code": "com.bemaservices"
+    },
+    "name": "MinistrySafe",
+    "version": "1.12.15",
+    "include": {
+        "com.bemaservices.MinistrySafe/bin/Release/net472/com.bemaservices.MinistrySafe.dll": "Bin/",
+        "com.bemaservices.MinistrySafe.Obsidian/dist/**": "Plugins/com_bemaservices/MinistrySafe",
+        "WebForms/**": "Plugins/com_bemaservices/MinistrySafe"
+    },
+    "exclude": []
+}
