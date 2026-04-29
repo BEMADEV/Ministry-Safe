@@ -33,7 +33,6 @@ namespace com.bemaservices.MinistrySafe.Jobs
 
     /// <summary>
     /// Job to update MinistrySafe step statuses based on completion dates and expiration thresholds.
-    /// Implements the <see cref="IJob" />
     /// </summary>
     /// <seealso cref="IJob" />
     [IntegerField( "Days Until Expiring",
@@ -61,7 +60,6 @@ namespace com.bemaservices.MinistrySafe.Jobs
         /// <summary>
         /// Executes the specified context.
         /// </summary>
-        /// <param name="context">The context.</param>
         public override void Execute()
         {
             var daysUntilExpiring = GetAttributeValue( "DaysUntilExpiring" ).AsIntegerOrNull() ?? 700;

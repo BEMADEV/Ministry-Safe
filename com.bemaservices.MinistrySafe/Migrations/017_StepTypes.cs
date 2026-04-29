@@ -96,7 +96,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
                VALUES ( 
                   0
                   ,1
-                  ,'Update Steps'
+                  ,'Update MinistrySafe Steps'
                   ,''
                   ,'com.bemaservices.MinistrySafe.Jobs.UpdateStepStatuses'
                   ,'0 0 5 1/1 * ? *'
