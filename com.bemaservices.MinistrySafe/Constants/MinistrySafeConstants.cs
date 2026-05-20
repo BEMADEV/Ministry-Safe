@@ -73,6 +73,11 @@ namespace com.bemaservices.MinistrySafe.Constants
         public const string MINISTRYSAFE_BACKGROUNDCHECK_URL = "v2/background_checks";
 
         /// <summary>
+        /// The ministrysafe available levels URL
+        /// </summary>
+        public const string MINISTRYSAFE_AVAILABLE_LEVELS_URL = "v2/background_checks/available_levels";
+
+        /// <summary>
         /// The ministrysafe workflow type name
         /// </summary>
         public const string MINISTRYSAFE_WORKFLOW_TYPE_NAME = "MinistrySafe Safe Training";

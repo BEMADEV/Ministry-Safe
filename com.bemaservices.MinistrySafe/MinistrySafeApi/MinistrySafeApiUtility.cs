@@ -858,6 +858,41 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             return true;
         }
 
+        /// <summary>
+        /// Gets the available background check levels for the organization.
+        /// </summary>
+        /// <param name="availableLevels">The available levels.</param>
+        /// <param name="errorMessages">The error messages.</param>
+        /// <returns><c>true</c> if the request was successful, <c>false</c> otherwise.</returns>
+        internal static bool GetAvailableLevels( out List<int> availableLevels, List<string> errorMessages )
+        {
+            availableLevels = null;
+            RestClient restClient = RestClient();
+            RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_AVAILABLE_LEVELS_URL );
+            IRestResponse restResponse = restClient.Execute( restRequest );
+
+            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            {
+                errorMessages.Add( "Failed to authorize MinistrySafe. Please confirm your access token." );
+                return false;
+            }
+
+            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            {
+                errorMessages.Add( "Failed to get MinistrySafe Available Levels: " + restResponse.Content );
+                return false;
+            }
+
+            availableLevels = JsonConvert.DeserializeObject<List<int>>( restResponse.Content );
+            if ( availableLevels == null )
+            {
+                errorMessages.Add( "Get Available Levels is not valid: " + restResponse.Content );
+                return false;
+            }
+
+            return true;
+        }
+
         #endregion
     }
 }
