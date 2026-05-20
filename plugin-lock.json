@@ -19,6 +19,25 @@
       "installedFiles": [
         "Bin/com.bemaservices.MinistrySafe.dll",
         "Plugins/com_bemaservices/MinistrySafe/.gitignore",
+        "Plugins/com_bemaservices/MinistrySafe/Assets/Images/MinistrySafe.png",
+        "Plugins/com_bemaservices/MinistrySafe/Assets/Lava/MinistrySafeTabs.lava",
+        "Plugins/com_bemaservices/MinistrySafe/Assets/Sql/BackgroundCheckReport.sql",
+        "Plugins/com_bemaservices/MinistrySafe/MinistrySafeRequestList.ascx",
+        "Plugins/com_bemaservices/MinistrySafe/MinistrySafeRequestList.ascx.cs",
+        "Plugins/com_bemaservices/MinistrySafe/MinistrySafeSettings.ascx",
+        "Plugins/com_bemaservices/MinistrySafe/MinistrySafeSettings.ascx.cs",
+        "Plugins/com_bemaservices/MinistrySafe/MinistrySafeTrainingList.ascx",
+        "Plugins/com_bemaservices/MinistrySafe/MinistrySafeTrainingList.ascx.cs"
+      ]
+    },
+    {
+      "version": "1.12.16",
+      "installedFiles": [
+        "Bin/com.bemaservices.MinistrySafe.dll",
+        "Plugins/com_bemaservices/MinistrySafe/.gitignore",
+        "Plugins/com_bemaservices/MinistrySafe/Assets/Images/MinistrySafe.png",
+        "Plugins/com_bemaservices/MinistrySafe/Assets/Lava/MinistrySafeTabs.lava",
+        "Plugins/com_bemaservices/MinistrySafe/Assets/Sql/BackgroundCheckReport.sql",
         "Plugins/com_bemaservices/MinistrySafe/MinistrySafeRequestList.ascx",
         "Plugins/com_bemaservices/MinistrySafe/MinistrySafeRequestList.ascx.cs",
         "Plugins/com_bemaservices/MinistrySafe/MinistrySafeSettings.ascx",

@@ -1062,8 +1062,16 @@ namespace com.bemaservices.MinistrySafe
 
                 var stepTypeMapping = new Dictionary<string, Guid>();
                 var stepProgram = StepProgramCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_TRAINING_PROGRAM.AsGuid() );
+                
+                if ( stepProgram == null )
+                {
+                    errorMessages.Add( "MinistrySafe Training Step Program not found. Please ensure the MinistrySafe migrations have run." );
+                    return false;
+                }
+
                 var stepTypeService = new StepTypeService( rockContext );
-                var stepTypeList = stepTypeService.Queryable().Where( st => st.StepProgram.Guid == stepProgram.Guid ).ToList();
+                var stepProgramGuid = stepProgram.Guid;
+                var stepTypeList = stepTypeService.Queryable().Where( st => st.StepProgram.Guid == stepProgramGuid ).ToList();
 
                 // First, mark all existing codes as inactive
                 foreach ( var stepType in stepTypeList )
