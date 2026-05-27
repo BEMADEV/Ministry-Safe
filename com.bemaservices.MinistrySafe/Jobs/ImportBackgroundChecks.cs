@@ -39,6 +39,7 @@ namespace com.bemaservices.MinistrySafe.Jobs
     /// <seealso cref="IJob" />
     [SlidingDateRangeField( "Date Range", "The date range of trainings to import.", required: true )]
     [WorkflowTypeField( "Workflow Type", "An optional workflow type to fire for background checks without an existing workflow.", required: false )]
+    [BooleanField( "Relaunch Completed Workflows", "If enabled, a new workflow will be launched for background checks where the existing workflow has already completed.", false, Order = 2 )]
     [DisallowConcurrentExecution]
     public class ImportBackgroundChecks : RockJob
     {
@@ -69,8 +70,10 @@ namespace com.bemaservices.MinistrySafe.Jobs
                 workflowType = WorkflowTypeCache.Get( workflowTypeGuid.Value );
             }
 
+            bool relaunchCompletedWorkflows = GetAttributeValue( "RelaunchCompletedWorkflows" ).AsBoolean();
+
             var ministrySafe = new MinistrySafe();
-            ministrySafe.ImportBackgroundChecks( dateRange, workflowType, out backgroundChecksProcessed, out errorMessages );
+            ministrySafe.ImportBackgroundChecks( dateRange, workflowType, relaunchCompletedWorkflows, out backgroundChecksProcessed, out errorMessages );
 
             this.Result += string.Format( "{0} background checks processed{1}", backgroundChecksProcessed, ( errorMessages.Count > 0 ) ? ", but " + errorMessages.Count + " errors were reported" : string.Empty );
         }

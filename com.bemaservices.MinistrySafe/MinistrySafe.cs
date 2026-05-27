@@ -529,7 +529,7 @@ namespace com.bemaservices.MinistrySafe
 
                 LogMessageToDebuggingInteraction( interactionId, "Loaded tazworkFlagged info." );
 
-                return UpdateBackgroundCheck( requestId, externalId, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged, null, interactionId );
+                return UpdateBackgroundCheck( requestId, externalId, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged, null, false, interactionId );
             }
             catch ( Exception ex )
             {
@@ -556,9 +556,12 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="status">The status.</param>
         /// <param name="completionDate">The completion date.</param>
         /// <param name="orderDate">The order date.</param>
+        /// <param name="tazworkFlagged">if set to <c>true</c> [tazwork flagged].</param>
         /// <param name="workflowTypeCache">The workflow type cache.</param>
+        /// <param name="relaunchCompletedWorkflows">if set to <c>true</c>, launch a new workflow if the existing workflow has already completed.</param>
+        /// <param name="interactionId">The interaction identifier.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        private static bool UpdateBackgroundCheck( string requestId, string externalId, string resultsUrl, int? userId, int? level, string customPackageCode, string status, DateTime? completionDate, DateTime? orderDate, bool? tazworkFlagged = null, WorkflowTypeCache workflowTypeCache = null, int? interactionId = null )
+        private static bool UpdateBackgroundCheck( string requestId, string externalId, string resultsUrl, int? userId, int? level, string customPackageCode, string status, DateTime? completionDate, DateTime? orderDate, bool? tazworkFlagged = null, WorkflowTypeCache workflowTypeCache = null, bool relaunchCompletedWorkflows = false, int? interactionId = null )
         {
             try
             {
@@ -695,6 +698,13 @@ namespace com.bemaservices.MinistrySafe
                     if ( workflow != null )
                     {
                         LogMessageToDebuggingInteraction( interactionId, String.Format( "Found Matching Workflow Id: {0}.", workflow.Id ) );
+
+                        // Check if the workflow is completed and we should relaunch
+                        if ( relaunchCompletedWorkflows && workflow.CompletedDateTime.HasValue && workflowTypeCache != null )
+                        {
+                            LogMessageToDebuggingInteraction( interactionId, String.Format( "Existing Workflow Id: {0} is completed (CompletedDateTime: {1}). Relaunching new workflow.", workflow.Id, workflow.CompletedDateTime ) );
+                            workflow = null; // Clear so a new one will be created below
+                        }
                     }
 
                     if ( workflow == null && workflowTypeCache != null )
@@ -1331,10 +1341,11 @@ namespace com.bemaservices.MinistrySafe
         /// </summary>
         /// <param name="dateRange">The date range.</param>
         /// <param name="workflowType">Type of the workflow.</param>
+        /// <param name="relaunchCompletedWorkflows">if set to <c>true</c>, launch a new workflow if the existing workflow has already completed.</param>
         /// <param name="backgroundChecksProcessed">The background checks processed.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal bool ImportBackgroundChecks( DateRange dateRange, WorkflowTypeCache workflowType, out int backgroundChecksProcessed, out List<string> errorMessages )
+        internal bool ImportBackgroundChecks( DateRange dateRange, WorkflowTypeCache workflowType, bool relaunchCompletedWorkflows, out int backgroundChecksProcessed, out List<string> errorMessages )
         {
             var startDate = dateRange.Start;
             var endDate = dateRange.End;
@@ -1399,7 +1410,7 @@ namespace com.bemaservices.MinistrySafe
                             BackgroundCheckStatuses.COMPLETED_CLEARED.Contains( status ) ||
                             BackgroundCheckStatuses.CANCELLED.Contains( status ) )
                         {
-                            if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged, workflowType ) )
+                            if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged, workflowType, relaunchCompletedWorkflows ) )
                             {
                                 backgroundChecksProcessed++;
                             }
@@ -1861,10 +1872,11 @@ namespace com.bemaservices.MinistrySafe
         /// </summary>
         /// <param name="dateRange">The date range.</param>
         /// <param name="workflowType">Type of the workflow.</param>
+        /// <param name="relaunchCompletedWorkflows">if set to <c>true</c>, launch a new workflow if the existing workflow has already completed.</param>
         /// <param name="trainingsProcessed">The trainings processed.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal bool ImportTrainings( DateRange dateRange, WorkflowTypeCache workflowType, out int trainingsProcessed, out List<string> errorMessages )
+        internal bool ImportTrainings( DateRange dateRange, WorkflowTypeCache workflowType, bool relaunchCompletedWorkflows, out int trainingsProcessed, out List<string> errorMessages )
         {
             var startDate = dateRange.Start;
             var endDate = dateRange.End;
@@ -1923,7 +1935,7 @@ namespace com.bemaservices.MinistrySafe
                         var createdDateTime = getAllTrainingResponse.CreatedDateTime;
                         if ( completedDateTime.HasValue )
                         {
-                            if ( UpdateTraining( externalId, userId, score, surveyCode, completedDateTime.Value, createdDateTime, workflowType, interactionId ) )
+                            if ( UpdateTraining( externalId, userId, score, surveyCode, completedDateTime.Value, createdDateTime, workflowType, relaunchCompletedWorkflows, interactionId ) )
                             {
                                 trainingsProcessed++;
                             }
@@ -1975,8 +1987,10 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="completedDateTime">The completed date time.</param>
         /// <param name="createdDateTime">The created date time.</param>
         /// <param name="workflowTypeCache">The workflow type cache.</param>
+        /// <param name="relaunchCompletedWorkflows">if set to <c>true</c>, launch a new workflow if the existing workflow has already completed.</param>
+        /// <param name="interactionId">The interaction identifier.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        private static bool UpdateTraining( string externalId, string userId, int? score, string surveyCode, DateTime completedDateTime, DateTime? createdDateTime, WorkflowTypeCache workflowTypeCache = null, int? interactionId = null )
+        private static bool UpdateTraining( string externalId, string userId, int? score, string surveyCode, DateTime completedDateTime, DateTime? createdDateTime, WorkflowTypeCache workflowTypeCache = null, bool relaunchCompletedWorkflows = false, int? interactionId = null )
         {
             var rockContext = new RockContext();
             var errorMessages = new List<string>();
@@ -2103,6 +2117,13 @@ namespace com.bemaservices.MinistrySafe
                 if ( workflow != null )
                 {
                     LogMessageToDebuggingInteraction( interactionId, String.Format( "Found Matching Workflow Id: {0}.", workflow.Id ) );
+
+                    // Check if the workflow is completed and we should relaunch
+                    if ( relaunchCompletedWorkflows && workflow.CompletedDateTime.HasValue && workflowTypeCache != null )
+                    {
+                        LogMessageToDebuggingInteraction( interactionId, String.Format( "Existing Workflow Id: {0} is completed (CompletedDateTime: {1}). Relaunching new workflow.", workflow.Id, workflow.CompletedDateTime ) );
+                        workflow = null; // Clear so a new one will be created below
+                    }
                 }
 
                 if ( workflow == null && workflowTypeCache != null )
