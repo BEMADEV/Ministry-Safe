@@ -580,62 +580,67 @@ namespace com.bemaservices.MinistrySafe
                     int? personAliasId = externalId.RemoveAllNonNumericCharacters().AsIntegerOrNull();
                     LogMessageToDebuggingInteraction( interactionId, "Found PersonAliasId. Searching for Background Check." );
 
-                    var backgroundCheck = new BackgroundCheckService( rockContext )
+                    var personBackgroundChecks = new BackgroundCheckService( rockContext )
                         .Queryable( "PersonAlias.Person" )
-                        .Where( g => ( requestId != null && g.RequestId == requestId ) || ( requestId == null && g.PersonAliasId == personAliasId ) )
+                        .Where( g => ( requestId != null && g.RequestId == requestId ) || ( g.PersonAliasId == personAliasId ) )
                         .Where( g => g.ForeignId == 4 )
+                        .OrderBy( m => m.ResponseDate.HasValue )
+                        .ThenByDescending( m => m.ResponseDate )
+                        .ThenByDescending( m => m.RequestDate );
+
+                    var backgroundCheck = personBackgroundChecks
+                        .Where( g => ( requestId != null && g.RequestId == requestId ) || ( requestId == null && g.PersonAliasId == personAliasId ) )
                         .OrderBy( m => m.ResponseDate.HasValue )
                         .ThenByDescending( m => m.ResponseDate )
                         .ThenByDescending( m => m.RequestDate )
                         .FirstOrDefault();
 
-                    LogMessageToDebuggingInteraction( interactionId, "No Matching Open Background Checks. Creating New Record." );
-
                     // Is it older than the most recent completed one?
+                    var mostRecentBackgroundCheck = personBackgroundChecks.FirstOrDefault();
+                    if ( mostRecentBackgroundCheck != null && 
+                        orderDate != null &&
+                        (backgroundCheck == null || backgroundCheck != mostRecentBackgroundCheck)
+                        )
+                    {
+                        LogMessageToDebuggingInteraction( interactionId, String.Format( "Using Background Check Id {0} with RequestDate {1} as Latest Background Check", mostRecentBackgroundCheck.Id, mostRecentBackgroundCheck.RequestDate ) );
+
+                        var existingDateTime = DateTime.Parse( mostRecentBackgroundCheck.RequestDate.ToShortDateTimeString() );
+                        var importedDateTime = DateTime.Parse( orderDate.Value.ToShortDateTimeString() );
+                        int dateCompareResult = DateTime.Compare( existingDateTime, importedDateTime );
+                        string relationship = string.Empty;
+                        if ( dateCompareResult < 0 )
+                            relationship = "is earlier than";
+                        else if ( dateCompareResult == 0 )
+                            relationship = "is the same time as";
+                        else
+                            relationship = "is later than";
+
+                        LogMessageToDebuggingInteraction( interactionId, String.Format(
+                            "Existing OrderDate of {0} {1} Imported OrderDate of {2}"
+                            , existingDateTime
+                            , relationship
+                            , importedDateTime ) );
+
+                        LogMessageToDebuggingInteraction( interactionId, String.Format(
+                            "Existing OrderDate.Ticks of {0} {1} Imported OrderDate.Ticks of {2}"
+                            , existingDateTime.Ticks
+                            , relationship
+                            , importedDateTime.Ticks ) );
+
+                        if ( dateCompareResult >= 0 )
+                        {
+                            LogMessageToDebuggingInteraction( interactionId, "Existing background check is up to date. Skipping import." );
+                            return true;
+                        }
+                        else
+                        {
+                            LogMessageToDebuggingInteraction( interactionId, "Imported Background Check is newer. Proceeding with import." );
+                        }
+                    }                    
+
                     if ( backgroundCheck != null )
                     {
-                        LogMessageToDebuggingInteraction( interactionId, String.Format( "Matched on BackgroundCheck Id {0}", backgroundCheck.Id ) );
-                        if ( orderDate != null )
-                        {
-                            LogMessageToDebuggingInteraction( interactionId, String.Format( "Using Background Check Id {0} with RequestDate {1} as Latest Background Check", latestBackgroundCheck.Id, latestBackgroundCheck.RequestDate ) );
-
-                            var existingDateTime = DateTime.Parse( backgroundCheck.RequestDate.ToShortDateTimeString() );
-                            var importedDateTime = DateTime.Parse( orderDate.Value.ToShortDateTimeString() );
-                            int dateCompareResult = DateTime.Compare( existingDateTime, importedDateTime );
-                            string relationship = string.Empty;
-                            if ( dateCompareResult < 0 )
-                                relationship = "is earlier than";
-                            else if ( dateCompareResult == 0 )
-                                relationship = "is the same time as";
-                            else
-                                relationship = "is later than";
-
-                            LogMessageToDebuggingInteraction( interactionId, String.Format(
-                                "Existing OrderDate of {0} {1} Imported OrderDate of {2}"
-                                , existingDateTime
-                                , relationship
-                                , importedDateTime ) );
-
-                            LogMessageToDebuggingInteraction( interactionId, String.Format(
-                                "Existing OrderDate.Ticks of {0} {1} Imported OrderDate.Ticks of {2}"
-                                , existingDateTime.Ticks
-                                , relationship
-                                , importedDateTime.Ticks ) );
-
-                            if ( dateCompareResult >= 0 )
-                            {
-                                LogMessageToDebuggingInteraction( interactionId, "Existing background check is up to date. Skipping import." );
-                                return true;
-                            }
-                            else
-                            {
-                                LogMessageToDebuggingInteraction( interactionId, "Imported Background Check is newer. Proceeding with import." );
-                            }
-                        }
-                    }
-                    else
-                    {
-                        LogMessageToDebuggingInteraction( interactionId, "No previous background check to compare to." );
+                        LogMessageToDebuggingInteraction( interactionId, String.Format( "Matched on BackgroundCheck Id {0}", backgroundCheck.Id ) );                      
                     }
 
                     if ( backgroundCheck == null )
