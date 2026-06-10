@@ -572,12 +572,19 @@ namespace com.bemaservices.MinistrySafe
                     //string userType = null;
                     var backgroundCheckService = new BackgroundCheckService( rockContext );
                     var errorMessages = new List<string>();
-                    if ( externalId == null )
+
+                    int? personAliasId = externalId?.RemoveAllNonNumericCharacters().AsIntegerOrNull();
+                    if ( personAliasId == null )
                     {
-                        externalId = FindRockPerson( userId.ToString(), rockContext, errorMessages );
+                        personAliasId = FindRockPerson( userId.ToString(), rockContext, errorMessages );
                     }
 
-                    int? personAliasId = externalId.RemoveAllNonNumericCharacters().AsIntegerOrNull();
+                    if ( personAliasId == null )
+                    {
+                        LogMessageToDebuggingInteraction( interactionId, string.Format( "Failed to find PersonAliasId for {0}. Skipping import.", externalId ) );
+                        return false;
+                    }
+
                     LogMessageToDebuggingInteraction( interactionId, "Found PersonAliasId. Searching for Background Check." );
 
                     var personBackgroundChecks = new BackgroundCheckService( rockContext )
@@ -597,9 +604,9 @@ namespace com.bemaservices.MinistrySafe
 
                     // Is it older than the most recent completed one?
                     var mostRecentBackgroundCheck = personBackgroundChecks.FirstOrDefault();
-                    if ( mostRecentBackgroundCheck != null && 
+                    if ( mostRecentBackgroundCheck != null &&
                         orderDate != null &&
-                        (backgroundCheck == null || backgroundCheck != mostRecentBackgroundCheck)
+                        ( backgroundCheck == null || backgroundCheck != mostRecentBackgroundCheck )
                         )
                     {
                         LogMessageToDebuggingInteraction( interactionId, String.Format( "Using Background Check Id {0} with RequestDate {1} as Latest Background Check", mostRecentBackgroundCheck.Id, mostRecentBackgroundCheck.RequestDate ) );
@@ -636,11 +643,11 @@ namespace com.bemaservices.MinistrySafe
                         {
                             LogMessageToDebuggingInteraction( interactionId, "Imported Background Check is newer. Proceeding with import." );
                         }
-                    }                    
+                    }
 
                     if ( backgroundCheck != null )
                     {
-                        LogMessageToDebuggingInteraction( interactionId, String.Format( "Matched on BackgroundCheck Id {0}", backgroundCheck.Id ) );                      
+                        LogMessageToDebuggingInteraction( interactionId, String.Format( "Matched on BackgroundCheck Id {0}", backgroundCheck.Id ) );
                     }
 
                     if ( backgroundCheck == null )
@@ -2045,13 +2052,40 @@ namespace com.bemaservices.MinistrySafe
             var errorMessages = new List<string>();
 
             LogMessageToDebuggingInteraction( interactionId, "Searching for PersonAliasId." );
-            if ( externalId.IsNullOrWhiteSpace() )
+            int? personAliasId = null;
+            int? workflowId = null;
+            if ( externalId.IsNotNullOrWhiteSpace() )
             {
-                externalId = FindRockPerson( userId, rockContext, errorMessages );
+                var numericExternalId = externalId.RemoveAllNonNumericCharacters().AsIntegerOrNull();
+
+                if ( numericExternalId != null )
+                {
+                    if ( externalId.Contains( "pa" ) )
+                    {
+                        var personAlias = new PersonAliasService( rockContext ).Get( numericExternalId.Value );
+                        if ( personAlias != null )
+                        {
+                            personAliasId = personAlias.Id;
+                        }
+                    }
+                    else
+                    {
+                        workflowId = numericExternalId;
+                    }
+                }
             }
 
-            var isExternalIdPersonAlias = externalId.Contains( "pa" );
-            var numericExternalId = externalId.RemoveAllNonNumericCharacters().AsIntegerOrNull();
+            if ( personAliasId == null )
+            {
+                personAliasId = FindRockPerson( userId, rockContext, errorMessages );
+            }
+
+            if ( personAliasId == null )
+            {
+                LogMessageToDebuggingInteraction( interactionId, string.Format( "Failed to find PersonAliasId for {0}. Skipping import.", externalId ) );
+                return false;
+            }
+
             LogMessageToDebuggingInteraction( interactionId, "Found PersonAliasId. Searching for Training." );
 
             var ministrySafeUserService = new MinistrySafeUserService( rockContext );
@@ -2059,8 +2093,8 @@ namespace com.bemaservices.MinistrySafe
                 .Queryable( "PersonAlias.Person" )
                 .Where( m =>
                         (
-                            ( !isExternalIdPersonAlias && m.WorkflowId == numericExternalId && m.ForeignId == 3 ) ||
-                            ( m.PersonAliasId == numericExternalId && ( m.ForeignId == 2 || m.ForeignId == 4 ) )
+                            ( workflowId != null && m.WorkflowId == workflowId && m.ForeignId == 3 ) ||
+                            ( personAliasId != null && m.PersonAliasId == personAliasId && ( m.ForeignId == 2 || m.ForeignId == 4 ) )
                         )
                     )
                 .OrderBy( m => m.CompletedDateTime.HasValue )
@@ -2133,7 +2167,7 @@ namespace com.bemaservices.MinistrySafe
 
                 var ministrySafeUser = new MinistrySafeUser();
                 ministrySafeUserService.Add( ministrySafeUser );
-                ministrySafeUser.PersonAliasId = numericExternalId.Value;
+                ministrySafeUser.PersonAliasId = personAliasId.Value;
                 ministrySafeUser.ForeignId = 4;
                 ministrySafeUser.SurveyCode = surveyCode;
                 ministrySafeUser.RequestDate = createdDateTime ?? RockDateTime.Now;
@@ -2206,7 +2240,7 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="rockContext">The rock context.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>System.String.</returns>
-        private static string FindRockPerson( string userId, RockContext rockContext, List<string> errorMessages )
+        private static int? FindRockPerson( string userId, RockContext rockContext, List<string> errorMessages )
         {
             var externalId = string.Empty;
             UserResponse userResponse = null;
@@ -2215,7 +2249,19 @@ namespace com.bemaservices.MinistrySafe
                 // Find Existing Match
                 if ( userResponse.PersonAliasId.IsNotNullOrWhiteSpace() )
                 {
-                    return userResponse.PersonAliasId;
+                    var numericExternalId = externalId.RemoveAllNonNumericCharacters().AsIntegerOrNull();
+
+                    if ( numericExternalId != null )
+                    {
+                        if ( externalId.Contains( "pa" ) )
+                        {
+                            var personAlias = new PersonAliasService( rockContext ).Get( numericExternalId.Value );
+                            if ( personAlias != null )
+                            {
+                                return personAlias.Id;
+                            }
+                        }
+                    }
                 }
 
                 // Find Rock Match
@@ -2255,11 +2301,11 @@ namespace com.bemaservices.MinistrySafe
 
                 if ( person != null )
                 {
-                    externalId = string.Format( "pa{0}", person.PrimaryAliasId );
+                    return person.PrimaryAliasId;
                 }
             }
 
-            return externalId;
+            return null;
         }
 
         /// <summary>
