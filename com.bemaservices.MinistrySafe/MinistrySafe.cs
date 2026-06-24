@@ -1466,7 +1466,7 @@ namespace com.bemaservices.MinistrySafe
                             BackgroundCheckStatuses.COMPLETED_CLEARED.Contains( status ) ||
                             BackgroundCheckStatuses.CANCELLED.Contains( status ) )
                         {
-                            if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged, workflowType, relaunchCompletedWorkflows ) )
+                            if ( UpdateBackgroundCheck( requestId, null, resultsUrl, userId, level, customPackageCode, status, completionDate, orderDate, tazworkFlagged, workflowType, relaunchCompletedWorkflows, interactionId ) )
                             {
                                 backgroundChecksProcessed++;
                             }
