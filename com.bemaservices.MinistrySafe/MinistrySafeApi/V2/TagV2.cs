@@ -16,19 +16,13 @@
 //
 using Newtonsoft.Json;
 
-namespace com.bemaservices.MinistrySafe.MinistrySafeApi
+namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V2
 {
     /// <summary>
     /// JSON return structure for the create candidate API call's response.
     /// </summary>
-    internal class PackageResponse
+    internal class TagV2
     {
-        /// <summary>
-        /// Gets or sets the candidate ID.
-        /// </summary>
-        /// <value>The candidate ID.</value>
-        [JsonProperty( "id" )]
-        public string Id { get; set; }
 
         /// <summary>
         /// Gets or sets the name.
@@ -36,25 +30,5 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <value>The name.</value>
         [JsonProperty( "name" )]
         public string Name { get; set; }
-
-        /// <summary>
-        /// Gets or sets the code.
-        /// </summary>
-        /// <value>The code.</value>
-        [JsonProperty( "code" )]
-        public string Code { get; set; }
-
-        /// <summary>
-        /// Gets or sets the price.
-        /// </summary>
-        /// <value>The price.</value>
-        [JsonProperty( "price" )]
-        public decimal Price { get; set; }
-
-        /// <summary>
-        /// Gets or sets the level.
-        /// </summary>
-        /// <value>The level.</value>
-        public int? Level { get; set; }
     }
 }

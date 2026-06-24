@@ -26,7 +26,8 @@ using System.Net;
 using System.Text;
 using com.bemaservices.MinistrySafe.Constants;
 using com.bemaservices.MinistrySafe.Migrations;
-using com.bemaservices.MinistrySafe.MinistrySafeApi;
+using com.bemaservices.MinistrySafe.MinistrySafeApi.V2;
+using com.bemaservices.MinistrySafe.MinistrySafeApi.V2.Obsolete;
 using com.bemaservices.MinistrySafe.Model;
 using Humanizer;
 using Newtonsoft.Json;
@@ -1053,7 +1054,7 @@ namespace com.bemaservices.MinistrySafe
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public static bool UpdateTags( List<string> errorMessages )
         {
-            List<TagResponse> tagResponseList;
+            List<TagV2> tagResponseList;
 
             if ( !MinistrySafeApiUtility.GetTags( out tagResponseList, errorMessages ) )
             {
@@ -1062,7 +1063,7 @@ namespace com.bemaservices.MinistrySafe
 
             if ( tagResponseList == null )
             {
-                tagResponseList = new List<TagResponse>();
+                tagResponseList = new List<TagV2>();
             }
 
             List<DefinedValue> tags;

@@ -1,0 +1,2277 @@
+﻿---
+openapi: 3.0.1
+info:
+  title: MinistrySafe API V3
+  version: v3
+  description: |
+    ## Overview
+
+    The MinistrySafe V3 API lets you manage users, trainings, and background checks for your organization.
+
+    **Base URL:** `https://www.ministrysafe.com/api/v3`
+
+    ## Authentication
+
+    All requests must include a **Bearer** token in the `Authorization` header:
+
+    ```
+    Authorization: Bearer <your-api-key>
+    ```
+
+    Use an **API key** generated in the MinistrySafe dashboard.
+
+    ## Pagination
+
+    List endpoints return paginated results. Use these query parameters to control pagination:
+
+    | Parameter   | Default | Description            |
+    |-------------|---------|------------------------|
+    | `page`      | 1       | Page number            |
+    | `page_size` | 25      | Results per page (max 100) |
+
+    Paginated responses include `page`, `page_size`, and `total_pages` fields alongside the `data` array.
+
+    ## Filtering
+
+    List endpoints support filtering via `filter[]` query parameters. For example:
+
+    ```
+    GET /api/v3/users?filter[name]=Smith&filter[user_type]=Volunteer
+    ```
+
+    ## Error Responses
+
+    Errors are returned with an appropriate HTTP status code and a JSON body:
+
+    - **Single error:** `{ "message": "Not found" }`
+    - **Validation errors:** `{ "errors": ["First name can't be blank", "..."] }`
+    - **Bulk operations:** A `207 Multi-Status` response with per-item `success`/`errors` details.
+
+    ## Date Format
+
+    All dates and timestamps are formatted as **ISO 8601** strings (e.g., `2025-06-15T14:30:00Z`).
+
+    ## Webhooks
+
+    Webhooks send HTTP POST requests to your configured URL when events occur in MinistrySafe.
+    See the **Webhook Documentation** page in the Developer Center for full payload details, event types, and signature verification instructions.
+paths:
+  "/api/v3/background_checks":
+    get:
+      summary: List background checks
+      description: Returns a paginated list of background checks for the authenticated
+        organization. Supports filtering by user, status, level, and date range.
+      tags:
+      - Background Checks
+      parameters:
+      - name: filter[user_id]
+        in: query
+        required: false
+        description: Filter by MinistrySafe user ID
+        schema:
+          type: integer
+      - name: filter[external_id]
+        in: query
+        required: false
+        description: Filter by external user ID
+        schema:
+          type: string
+      - name: filter[pco_id]
+        in: query
+        required: false
+        description: Filter by Planning Center user ID
+        schema:
+          type: string
+      - name: filter[status]
+        in: query
+        required: false
+        description: Filter by status (not_ordered, ordered, pending, approved, rejected,
+          archived, error, adverse, pre_adverse, submitted, ready, cancelled, billing,
+          adverse_rescind_offer, adverse_deny_employment, expired, applicant_withdrawn,
+          dispute)
+        schema:
+          type: string
+      - name: filter[level]
+        in: query
+        required: false
+        description: Filter by background check level
+        schema:
+          type: integer
+      - name: filter[start_date]
+        in: query
+        required: false
+        description: Filter by created_at >= (ISO 8601)
+        schema:
+          type: string
+      - name: filter[end_date]
+        in: query
+        required: false
+        description: Filter by created_at <= (ISO 8601)
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: page_size
+        in: query
+        required: false
+        description: 'Page size (default: 25, max: 100)'
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: filters by status
+          content:
+            application/json:
+              examples:
+                index_success:
+                  value:
+                    data:
+                    - id: 1
+                      order_date: '2025-06-15T00:00:00.000Z'
+                      status: ordered
+                      level: 4
+                      applicant_interface_url:
+                      payment_status:
+                    page: 1
+                    page_size: 25
+                    total_pages: 1
+                  summary: Paginated background checks
+        '403':
+          description: international organization without BGC activation
+  "/api/v3/background_checks/{id}":
+    get:
+      summary: Retrieve a background check
+      description: Returns a single background check by ID, scoped to the authenticated
+        organization.
+      tags:
+      - Background Checks
+      parameters:
+      - name: id
+        in: path
+        description: Background check ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: returns the background check
+          content:
+            application/json:
+              examples:
+                show_success:
+                  value:
+                    id: 1
+                    order_date: '2025-06-15T00:00:00.000Z'
+                    status: ordered
+                    level: 4
+                    applicant_interface_url:
+                    payment_status:
+                  summary: Single background check
+        '404':
+          description: background check belongs to another organization
+        '403':
+          description: invalid token
+  "/api/v3/background_checks/quickapp":
+    post:
+      summary: Order a QuickApp background check
+      description: Orders a QuickApp background check for a user. The user is identified
+        by exactly one of `user_id`, `external_id`, or `pco_id`. A QuickApp sends
+        the applicant a link to fill out their own information.
+      tags:
+      - Background Checks
+      parameters: []
+      responses:
+        '201':
+          description: allows ordering when prior background check is terminal
+          content:
+            application/json:
+              examples:
+                quickapp_success:
+                  value:
+                    id: 1
+                    order_date: '2025-06-15T00:00:00.000Z'
+                    status: ordered
+                    level: 4
+                    applicant_interface_url: https://reports.ministrysafe.com/orderquickapp/...
+                    payment_status:
+                  summary: QuickApp background check ordered
+        '422':
+          description: BGC T&Cs not agreed to
+          content:
+            application/json:
+              examples:
+                bgc_tandc_error:
+                  value:
+                    error: BGC T&Cs not agreed to
+                    message: BGC T&Cs not agreed to. Please log in to your MinistrySafe
+                      account and agree to the latest BGC Terms and Conditions.
+                  summary: T&C not agreed
+        '403':
+          description: invalid token
+          content:
+            application/json:
+              examples:
+                international_org_error:
+                  value:
+                    error: Background checks are not available for international organizations
+                    message: Your organization is located outside the United States
+                      and does not have access to background check functionality.
+                      Please contact support if you believe this is an error.
+                  summary: International org
+                invalid_token:
+                  value:
+                    message: Invalid token. Please reauthenticate.
+                  summary: Invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - background_check
+              properties:
+                background_check:
+                  type: object
+                  properties:
+                    user_id:
+                      type: integer
+                      description: MinistrySafe user ID
+                    external_id:
+                      type: string
+                      description: External user ID (employee ID)
+                    pco_id:
+                      type: string
+                      description: Planning Center user ID
+                    level:
+                      type: integer
+                      description: Background check level (1-7)
+                    custom_background_check_package_code:
+                      type: string
+                      description: Custom package code (alternative to level)
+                    age_over_13:
+                      type: boolean
+                      description: Confirms user is over 13 years old
+                    child_serving:
+                      type: boolean
+                      description: Whether user is child-serving
+                    employee_type:
+                      type: string
+                      description: Employee type (e.g. employee, prospective, current)
+                    user_type:
+                      type: string
+                      description: User type name (e.g. Employee, Volunteer)
+                    salary_range:
+                      type: string
+                      description: Salary range (under_20k, 20k_25k, 25k_75k, 75k_plus)
+                    applicant_self_disclosed:
+                      type: boolean
+                      description: Whether applicant self-disclosed
+                    applicant_self_disclosed_notes:
+                      type: string
+                      description: Self-disclosure notes (required if applicant_self_disclosed
+                        is true)
+                    upfront_payment:
+                      type: boolean
+                      description: Whether to charge the applicant upfront
+  "/api/v3/background_checks/longform":
+    post:
+      summary: Order a Longform background check
+      description: Orders a longform background check for a user. The user is identified
+        by exactly one of `user_id`, `external_id`, or `pco_id`. A longform check
+        submits the applicant's personal information directly.
+      tags:
+      - Background Checks
+      parameters: []
+      responses:
+        '201':
+          description: orders longform background check successfully
+          content:
+            application/json:
+              examples:
+                longform_success:
+                  value:
+                    id: 1
+                    order_date: '2025-06-15T00:00:00.000Z'
+                    status: pending
+                    level: 4
+                    applicant_interface_url:
+                    payment_status:
+                  summary: Longform background check ordered
+        '422':
+          description: longform disabled for custom package
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - background_check
+              properties:
+                background_check:
+                  type: object
+                  properties:
+                    user_id:
+                      type: integer
+                      description: MinistrySafe user ID
+                    external_id:
+                      type: string
+                      description: External user ID (employee ID)
+                    pco_id:
+                      type: string
+                      description: Planning Center user ID
+                    level:
+                      type: integer
+                      description: Background check level (1-7)
+                    custom_background_check_package_code:
+                      type: string
+                      description: Custom package code (alternative to level)
+                    first_name:
+                      type: string
+                      description: Applicant first name
+                    last_name:
+                      type: string
+                      description: Applicant last name
+                    address:
+                      type: string
+                      description: Street address
+                    city:
+                      type: string
+                      description: City
+                    county:
+                      type: string
+                      description: County
+                    state:
+                      type: string
+                      description: Two-letter state abbreviation (e.g. TX)
+                    zip:
+                      type: string
+                      description: ZIP code
+                    ssn:
+                      type: string
+                      description: Social Security Number
+                    dob:
+                      type: string
+                      description: Date of birth (YYYY-MM-DD)
+                    email:
+                      type: string
+                      description: Email address
+                    driver_license:
+                      type: string
+                      description: Driver license number
+                    driver_license_state:
+                      type: string
+                      description: Driver license state abbreviation
+                    child_serving:
+                      type: boolean
+                      description: Whether user is child-serving
+                    employee_type:
+                      type: string
+                      description: Employee type
+                    salary_range:
+                      type: string
+                      description: Salary range (under_20k, 20k_25k, 25k_75k, 75k_plus)
+                    applicant_self_disclosed:
+                      type: boolean
+                      description: Whether applicant self-disclosed
+                    applicant_self_disclosed_notes:
+                      type: string
+                      description: Self-disclosure notes
+  "/api/v3/background_checks/bulk_quickapp":
+    post:
+      summary: Bulk order QuickApp background checks
+      description: Orders up to 100 QuickApp background checks in a single request.
+        Each item identifies a user by exactly one of `user_id`, `external_id`, or
+        `pco_id`.
+      tags:
+      - Background Checks
+      parameters: []
+      responses:
+        '201':
+          description: all items succeed
+          content:
+            application/json:
+              examples:
+                bulk_quickapp_success:
+                  value:
+                    results:
+                    - index: 0
+                      success: true
+                      background_check:
+                        id: 1
+                        status: ordered
+                        level: 4
+                    - index: 1
+                      success: true
+                      background_check:
+                        id: 2
+                        status: ordered
+                        level: 4
+                  summary: All bulk QuickApp checks ordered
+        '207':
+          description: mixed success and failure
+          content:
+            application/json:
+              examples:
+                bulk_quickapp_mixed:
+                  value:
+                    results:
+                    - index: 0
+                      success: true
+                      background_check:
+                        id: 1
+                        status: ordered
+                        level: 4
+                    - index: 1
+                      success: false
+                      errors:
+                      - 'User not found with user_id: 999999'
+                      input:
+                        user_id: 999999
+                  summary: Mixed results
+        '422':
+          description: BGC T&Cs not agreed to
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - background_checks
+              properties:
+                background_checks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      user_id:
+                        type: integer
+                        description: MinistrySafe user ID
+                      external_id:
+                        type: string
+                        description: External user ID (employee ID)
+                      pco_id:
+                        type: string
+                        description: Planning Center user ID
+                      level:
+                        type: integer
+                        description: Background check level (1-7)
+                      custom_background_check_package_code:
+                        type: string
+                        description: Custom package code (alternative to level)
+                      age_over_13:
+                        type: boolean
+                        description: Confirms user is over 13 years old
+                      child_serving:
+                        type: boolean
+                        description: Whether user is child-serving
+                      employee_type:
+                        type: string
+                        description: Employee type (e.g. employee, prospective, current)
+                      user_type:
+                        type: string
+                        description: User type name (e.g. Employee, Volunteer)
+                      salary_range:
+                        type: string
+                        description: Salary range (under_20k, 20k_25k, 25k_75k, 75k_plus)
+                      applicant_self_disclosed:
+                        type: boolean
+                        description: Whether applicant self-disclosed
+                      applicant_self_disclosed_notes:
+                        type: string
+                        description: Self-disclosure notes
+                      upfront_payment:
+                        type: boolean
+                        description: Whether to charge the applicant upfront
+  "/api/v3/background_checks/bulk_longform":
+    post:
+      summary: Bulk order Longform background checks
+      description: Orders up to 100 longform background checks in a single request.
+        Each item identifies a user by exactly one of `user_id`, `external_id`, or
+        `pco_id` and provides applicant personal information.
+      tags:
+      - Background Checks
+      parameters: []
+      responses:
+        '201':
+          description: all items succeed
+          content:
+            application/json:
+              examples:
+                bulk_longform_success:
+                  value:
+                    results:
+                    - index: 0
+                      success: true
+                      background_check:
+                        id: 1
+                        status: pending
+                        level: 1
+                    - index: 1
+                      success: true
+                      background_check:
+                        id: 2
+                        status: pending
+                        level: 1
+                  summary: All bulk longform checks ordered
+        '207':
+          description: mixed success and failure
+          content:
+            application/json:
+              examples:
+                bulk_longform_mixed:
+                  value:
+                    results:
+                    - index: 0
+                      success: true
+                      background_check:
+                        id: 1
+                        status: pending
+                        level: 1
+                    - index: 1
+                      success: false
+                      errors:
+                      - 'User not found with user_id: 999999'
+                      input:
+                        user_id: 999999
+                  summary: Mixed results
+        '422':
+          description: BGC T&Cs not agreed to
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - background_checks
+              properties:
+                background_checks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      user_id:
+                        type: integer
+                        description: MinistrySafe user ID
+                      external_id:
+                        type: string
+                        description: External user ID (employee ID)
+                      pco_id:
+                        type: string
+                        description: Planning Center user ID
+                      level:
+                        type: integer
+                        description: Background check level (1-7)
+                      custom_background_check_package_code:
+                        type: string
+                        description: Custom package code (alternative to level)
+                      first_name:
+                        type: string
+                        description: Applicant first name
+                      last_name:
+                        type: string
+                        description: Applicant last name
+                      address:
+                        type: string
+                        description: Street address
+                      city:
+                        type: string
+                        description: City
+                      county:
+                        type: string
+                        description: County
+                      state:
+                        type: string
+                        description: Two-letter state abbreviation (e.g. TX)
+                      zip:
+                        type: string
+                        description: ZIP code
+                      ssn:
+                        type: string
+                        description: Social Security Number
+                      dob:
+                        type: string
+                        description: Date of birth (YYYY-MM-DD)
+                      email:
+                        type: string
+                        description: Email address
+                      driver_license:
+                        type: string
+                        description: Driver license number
+                      driver_license_state:
+                        type: string
+                        description: Driver license state abbreviation
+                      child_serving:
+                        type: boolean
+                        description: Whether user is child-serving
+                      employee_type:
+                        type: string
+                        description: Employee type
+                      salary_range:
+                        type: string
+                        description: Salary range (under_20k, 20k_25k, 25k_75k, 75k_plus)
+                      applicant_self_disclosed:
+                        type: boolean
+                        description: Whether applicant self-disclosed
+                      applicant_self_disclosed_notes:
+                        type: string
+                        description: Self-disclosure notes
+  "/api/v3/background_checks/levels":
+    get:
+      summary: List available background check levels
+      description: Returns the available background check levels with pricing, processing
+        times, and details for the authenticated organization.
+      tags:
+      - Background Checks
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        description: Bearer token
+        schema:
+          type: string
+      responses:
+        '200':
+          description: returns empty levels when no config
+          content:
+            application/json:
+              examples:
+                levels_success:
+                  value:
+                    levels:
+                    - level: 1
+                      name: Level 1
+                      price: 1.21
+                      processing_time: 1 business day
+                      details:
+                      - Instant Recall
+                      - Multi-Jurisdictional Database Address
+                      - National Sex Offender Registry
+                      additional_notes: []
+                    additional_notes:
+                    - Additional fees may apply for county searches and motor vehicle
+                      reports.
+                    upfront_payment_enabled: false
+                  summary: Available levels with pricing and details
+        '403':
+          description: international organization without BGC activation
+  "/api/v3/documents":
+    get:
+      summary: List documents
+      description: Returns a paginated list of documents belonging to the organization.
+        Supports filtering by name, category, and active status.
+      tags:
+      - Documents
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number (default 1)
+        schema:
+          type: integer
+      - name: page_size
+        in: query
+        required: false
+        description: Page size (default 25, max 100)
+        schema:
+          type: integer
+      - name: filter[name]
+        in: query
+        required: false
+        description: Filter by document name (fuzzy match)
+        schema:
+          type: string
+      - name: filter[category]
+        in: query
+        required: false
+        description: Filter by category (application, policy, other, reference, interview)
+        schema:
+          type: string
+      - name: filter[active]
+        in: query
+        required: false
+        description: Filter by active status
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: filters by name
+          content:
+            application/json:
+              examples:
+                document_list:
+                  value:
+                    data:
+                    - id: 1
+                      name: Background Check Form
+                      category: application
+                      e_sign_verification: false
+                      active: true
+                    page: 1
+                    page_size: 25
+                    total_pages: 1
+                  summary: Paginated document list
+        '403':
+          description: invalid token
+          content:
+            application/json:
+              examples:
+                invalid_token:
+                  value:
+                    message: Invalid token. Please reauthenticate.
+                  summary: Invalid token
+  "/api/v3/documents/{id}":
+    get:
+      summary: Get a document
+      description: Returns a single document by ID.
+      tags:
+      - Documents
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        description: Document ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: returns document
+          content:
+            application/json:
+              examples:
+                document:
+                  value:
+                    id: 1
+                    name: Background Check Form
+                    category: application
+                    e_sign_verification: false
+                    active: true
+                  summary: Document object
+        '404':
+          description: document not found
+        '403':
+          description: invalid token
+          content:
+            application/json:
+              examples:
+                invalid_token_show:
+                  value:
+                    message: Invalid token. Please reauthenticate.
+                  summary: Invalid token
+  "/api/v3/documents/assigned":
+    get:
+      summary: List assigned documents
+      description: Returns a paginated list of assigned documents (documents_users)
+        for the organization. Supports filtering by user_id, employee_id, pco_id,
+        category, and document_id.
+      tags:
+      - Documents
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number (default 1)
+        schema:
+          type: integer
+      - name: page_size
+        in: query
+        required: false
+        description: Page size (default 25, max 100)
+        schema:
+          type: integer
+      - name: filter[user_id]
+        in: query
+        required: false
+        description: Filter by user ID
+        schema:
+          type: integer
+      - name: filter[employee_id]
+        in: query
+        required: false
+        description: Filter by employee ID (external_id)
+        schema:
+          type: string
+      - name: filter[pco_id]
+        in: query
+        required: false
+        description: Filter by Planning Center Online ID
+        schema:
+          type: string
+      - name: filter[category]
+        in: query
+        required: false
+        description: Filter by document category (application, policy, other, reference,
+          interview)
+        schema:
+          type: string
+      - name: filter[document_id]
+        in: query
+        required: false
+        description: Filter by document ID
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: filters by user_id
+          content:
+            application/json:
+              examples:
+                assigned_document_list:
+                  value:
+                    data:
+                    - id: 1
+                      completed: false
+                      completed_date:
+                      approved_at:
+                      rejected_at:
+                      status: in-progress
+                      user:
+                        id: 1
+                        employee_id: EMP001
+                        first_name: John
+                        last_name: Doe
+                      document:
+                        id: 1
+                        name: Background Check Form
+                        category: application
+                    page: 1
+                    page_size: 25
+                    total_pages: 1
+                  summary: Paginated assigned document list
+        '403':
+          description: invalid token
+          content:
+            application/json:
+              examples:
+                invalid_token_assigned:
+                  value:
+                    message: Invalid token. Please reauthenticate.
+                  summary: Invalid token
+  "/api/v3/documents/assigned/{id}":
+    get:
+      summary: Get an assigned document
+      description: Returns a single assigned document (documents_user) by ID.
+      tags:
+      - Documents
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        description: Assigned document ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: returns assigned document
+          content:
+            application/json:
+              examples:
+                assigned_document:
+                  value:
+                    id: 1
+                    completed: false
+                    completed_date:
+                    approved_at:
+                    rejected_at:
+                    status: in-progress
+                    user:
+                      id: 1
+                      employee_id: EMP001
+                      first_name: John
+                      last_name: Doe
+                    document:
+                      id: 1
+                      name: Background Check Form
+                      category: application
+                  summary: Assigned document object
+        '404':
+          description: assigned document not found
+        '403':
+          description: invalid token
+          content:
+            application/json:
+              examples:
+                invalid_token_assigned_show:
+                  value:
+                    message: Invalid token. Please reauthenticate.
+                  summary: Invalid token
+  "/api/v3/documents/{id}/assign":
+    post:
+      summary: Assign a document
+      description: Assigns a document to a user. The user is identified by exactly
+        one of `user_id`, `external_id`, or `pco_id`. For reference-category documents,
+        the `references` parameter is required.
+      tags:
+      - Documents
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        description: Document ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '201':
+          description: assigns document successfully via pco_id
+        '422':
+          description: reference document missing references param
+        '404':
+          description: document not found or inactive
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                  description: MinistrySafe user ID
+                external_id:
+                  type: string
+                  description: External user ID
+                pco_id:
+                  type: string
+                  description: Planning Center user ID
+                send_email:
+                  type: boolean
+                  description: Send assignment email (default true)
+                references:
+                  type: object
+                  description: Reference counts (required for reference-category documents)
+                  properties:
+                    personal:
+                      type: integer
+                    professional:
+                      type: integer
+                    family_member:
+                      type: integer
+  "/api/v3/organizations/{id}":
+    get:
+      summary: Get an organization
+      description: Returns a single organization by ID. Billing providers can look
+        up any of their child organizations; otherwise, only the organization associated
+        with the API key is returned.
+      tags:
+      - Organizations
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: billing provider can view child organization
+          content:
+            application/json:
+              examples:
+                organization:
+                  value:
+                    id: 1
+                    name: First Church
+                    address: 123 Main St
+                    city: Dallas
+                    state: TX
+                    country: US
+                    county:
+                    zip: '75001'
+                    hear_from: google
+                    size_of_org: 1-200
+                    phone: '2222222222'
+                    billing_email: org@example.com
+                    organization_type: Church
+                    other_type_description: some desc
+                    allow_sign_in_link_creation: false
+                    use_billing_provider: false
+                  summary: Organization object
+        '404':
+          description: organization not found (non-billing-provider accessing other
+            org)
+        '403':
+          description: invalid token
+          content:
+            application/json:
+              examples:
+                invalid_token:
+                  value:
+                    message: Invalid token. Please reauthenticate.
+                  summary: Invalid token
+    patch:
+      summary: Update an organization
+      description: Updates one or more attributes on an existing organization. Only
+        the fields included in the request body will be changed.
+      tags:
+      - Organizations
+      security:
+      - bearer_auth: []
+      parameters:
+      - name: id
+        in: path
+        description: Organization ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: ignores blank state value
+          content:
+            application/json:
+              examples:
+                updated_organization:
+                  value:
+                    id: 1
+                    name: Updated Church
+                    address: 123 Main St
+                    city: Austin
+                    state: TX
+                    country: US
+                    county:
+                    zip: '75001'
+                    hear_from: google
+                    size_of_org: 1-200
+                    phone: '2222222222'
+                    billing_email: org@example.com
+                    organization_type: Church
+                    other_type_description: some desc
+                    allow_sign_in_link_creation: false
+                    use_billing_provider: false
+                  summary: Updated organization
+        '422':
+          description: unresolvable organization_type returns error
+        '404':
+          description: organization not found
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: Updated Church Name
+                    address:
+                      type: string
+                      example: 456 New St
+                    city:
+                      type: string
+                      example: Austin
+                    state:
+                      type: string
+                      example: TX
+                      description: State abbreviation or name
+                    country:
+                      type: string
+                      example: US
+                      description: Country code or name
+                    county:
+                      type: string
+                      example: Travis
+                      description: County name or code
+                    zip:
+                      type: string
+                      example: '73301'
+                    organization_type:
+                      type: string
+                      example: Church
+                    other_type_description:
+                      type: string
+                    hear_from:
+                      type: string
+                    size_of_org:
+                      type: string
+                    phone:
+                      type: string
+                    billing_email:
+                      type: string
+                    allow_sign_in_link_creation:
+                      type: boolean
+                      example: true
+                      description: Enable or disable sign-in link creation for this
+                        organization
+                    use_billing_provider:
+                      type: boolean
+                      example: true
+                      description: Link or unlink this organization to the billing
+                        provider associated with the API key
+            examples:
+              '0':
+                summary: Partial update
+                value:
+                  organization:
+                    name: Updated Church
+                    city: Austin
+  "/api/v3/organizations":
+    post:
+      summary: Create an organization
+      description: Creates a new organization with an SSA (System Admin) user. Requires
+        a billing provider API key with organization creation permissions.
+      tags:
+      - Organizations
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '201':
+          description: creates a new organization
+          content:
+            application/json:
+              examples:
+                created_organization:
+                  value:
+                    organization:
+                      id: 1
+                      name: New Church
+                      address: 123 Main St
+                      city: Dallas
+                      state: TX
+                      country: US
+                      county:
+                      zip: '75001'
+                      hear_from: google
+                      size_of_org: 1-200
+                      phone: '2222222222'
+                      billing_email: billing@example.com
+                      organization_type: Church
+                      other_type_description:
+                      allow_sign_in_link_creation: true
+                      use_billing_provider: true
+                    organization_api_key: ot_abc123...
+                  summary: Created organization with API key
+        '422':
+          description: missing ssa parameter
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: New Church
+                    address:
+                      type: string
+                      example: 123 Main St
+                    city:
+                      type: string
+                      example: Dallas
+                    state:
+                      type: string
+                      example: TX
+                    country:
+                      type: string
+                      example: US
+                    county:
+                      type: string
+                      example: Dallas
+                    zip:
+                      type: string
+                      example: '75001'
+                    organization_type:
+                      type: string
+                      example: Church
+                    other_type_description:
+                      type: string
+                    hear_from:
+                      type: string
+                      example: google
+                    size_of_org:
+                      type: string
+                      example: 1-200
+                    phone:
+                      type: string
+                      example: '2222222222'
+                    billing_email:
+                      type: string
+                      example: billing@example.com
+                    allow_sign_in_link_creation:
+                      type: boolean
+                      example: true
+                    use_billing_provider:
+                      type: boolean
+                      example: true
+                    ssa:
+                      type: object
+                      properties:
+                        first_name:
+                          type: string
+                          example: Jane
+                        last_name:
+                          type: string
+                          example: Doe
+                        email:
+                          type: string
+                          example: jane@example.com
+                        username:
+                          type: string
+                          example: janedoe
+                        type:
+                          type: string
+                          example: employee
+                          description: Background check type for the SSA user type
+                      required:
+                      - first_name
+                      - last_name
+                      - email
+                      - username
+                  required:
+                  - name
+                  - ssa
+                  - use_billing_provider
+              required:
+              - organization
+            examples:
+              '0':
+                summary: New organization with SSA
+                value:
+                  organization:
+                    name: New Church
+                    address: 123 Main St
+                    city: Dallas
+                    state: TX
+                    country: US
+                    zip: '75001'
+                    phone: '2222222222'
+                    billing_email: billing@example.com
+                    organization_type: Church
+                    hear_from: google
+                    size_of_org: 1-200
+                    allow_sign_in_link_creation: true
+                    use_billing_provider: true
+                    ssa:
+                      first_name: Jane
+                      last_name: Doe
+                      email: jane@example.com
+                      username: janedoe
+                      type: employee
+  "/api/v3/trainings":
+    get:
+      summary: List available trainings
+      description: Returns available trainings for the organization, grouped by short_name
+        with nested language variants. Each variant includes the survey ID, description,
+        and price. Supports filtering by short_name, language, and include_inactive.
+      tags:
+      - Trainings
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number (default 1)
+        schema:
+          type: integer
+      - name: page_size
+        in: query
+        required: false
+        description: Page size (default 25, max 100)
+        schema:
+          type: integer
+      - name: filter[short_name]
+        in: query
+        required: false
+        description: Filter by training short name
+        schema:
+          type: string
+      - name: filter[language]
+        in: query
+        required: false
+        description: Filter by language (e.g. en, es)
+        schema:
+          type: string
+      - name: filter[include_inactive]
+        in: query
+        required: false
+        description: Include inactive trainings (default false)
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: includes inactive trainings when filter[include_inactive] is
+            true
+          content:
+            application/json:
+              examples:
+                training_list:
+                  value:
+                    data:
+                    - short_name: standard
+                      languages:
+                      - id: 1
+                        language: en
+                        description: awareness
+                        price: 15.0
+                    page: 1
+                    page_size: 25
+                    total_pages: 1
+                  summary: Grouped training list
+        '403':
+          description: invalid token
+          content:
+            application/json:
+              examples:
+                invalid_token:
+                  value:
+                    message: Invalid token. Please reauthenticate.
+                  summary: Invalid token
+  "/api/v3/trainings/attempts/{id}":
+    get:
+      summary: Get a training attempt
+      description: Returns a single training attempt by ID. Includes participant info,
+        training info, score, completion status, and certificate URL.
+      tags:
+      - Trainings
+      parameters:
+      - name: id
+        in: path
+        description: Training attempt ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: returns incomplete training attempt
+          content:
+            application/json:
+              examples:
+                training_attempt:
+                  value:
+                    id: 1
+                    completed: true
+                    passed: true
+                    score: 85
+                    created_at: '2025-06-15T14:30:00.000Z'
+                    due_date: '2025-12-31T00:00:00.000Z'
+                    payment_status:
+                    certificate_url: https://www.ministrysafe.com/trainings/1/certificate?token=abc
+                    participant:
+                      id: 1
+                      first_name: Jane
+                      last_name: Doe
+                    training:
+                      short_name: standard
+                      language: en
+                  summary: Completed training attempt
+        '404':
+          description: attempt not found (other org)
+        '403':
+          description: invalid token
+  "/api/v3/trainings/attempts":
+    get:
+      summary: List training attempts
+      description: Returns a paginated list of training attempts for the organization.
+        Supports filtering by user_id, employee_id, pco_id, training_code, completed,
+        passed, start_date, and end_date.
+      tags:
+      - Trainings
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number (default 1)
+        schema:
+          type: integer
+      - name: page_size
+        in: query
+        required: false
+        description: Page size (default 25, max 100)
+        schema:
+          type: integer
+      - name: filter[user_id]
+        in: query
+        required: false
+        description: Filter by MinistrySafe user ID
+        schema:
+          type: integer
+      - name: filter[employee_id]
+        in: query
+        required: false
+        description: Filter by external employee ID
+        schema:
+          type: string
+      - name: filter[pco_id]
+        in: query
+        required: false
+        description: Filter by Planning Center Online user ID
+        schema:
+          type: string
+      - name: filter[training_code]
+        in: query
+        required: false
+        description: Filter by training API code (e.g. standard, camp)
+        schema:
+          type: string
+      - name: filter[completed]
+        in: query
+        required: false
+        description: Filter by completion status
+        schema:
+          type: boolean
+      - name: filter[passed]
+        in: query
+        required: false
+        description: Filter by pass/fail status
+        schema:
+          type: boolean
+      - name: filter[start_date]
+        in: query
+        required: false
+        description: Filter attempts created on or after this ISO-8601 datetime
+        schema:
+          type: string
+      - name: filter[end_date]
+        in: query
+        required: false
+        description: Filter attempts created on or before this ISO-8601 datetime
+        schema:
+          type: string
+      responses:
+        '200':
+          description: excludes other organization attempts
+          content:
+            application/json:
+              examples:
+                attempt_list:
+                  value:
+                    data:
+                    - id: 1
+                      completed: true
+                      passed: true
+                      score: 90
+                      created_at: '2025-06-15T14:30:00.000Z'
+                      due_date: '2025-12-31T00:00:00.000Z'
+                      payment_status:
+                      certificate_url:
+                      participant:
+                        id: 1
+                        first_name: Jane
+                        last_name: Doe
+                      training:
+                        short_name: standard
+                        language: en
+                    page: 1
+                    page_size: 25
+                    total_pages: 1
+                  summary: Paginated attempt list
+        '403':
+          description: invalid token
+  "/api/v3/trainings/{id}/assign":
+    post:
+      summary: Assign a training
+      description: Assigns a training to a single user. The user is identified by
+        exactly one of `user_id`, `external_id`, or `pco_id`.
+      tags:
+      - Trainings
+      parameters:
+      - name: id
+        in: path
+        description: Training (Survey) ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '201':
+          description: leaves source_platform nil when api_key has no platform
+        '422':
+          description: upfront_payment when not allowed
+        '404':
+          description: survey not found or not available to org
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                  description: MinistrySafe user ID
+                external_id:
+                  type: string
+                  description: External user ID
+                pco_id:
+                  type: string
+                  description: Planning Center user ID
+                send_email:
+                  type: boolean
+                  description: Send assignment email (default false)
+                upfront_payment:
+                  type: boolean
+                  description: Charge user upfront for the training
+  "/api/v3/trainings/{id}/bulk_assign":
+    post:
+      summary: Bulk assign a training
+      description: Assigns a training to multiple users in a single request. Each
+        entry must include exactly one of `user_id`, `external_id`, or `pco_id`. Maximum
+        100 assignments per request.
+      tags:
+      - Trainings
+      parameters:
+      - name: id
+        in: path
+        description: Training (Survey) ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '201':
+          description: stamps source_platform from api_key on every attempt
+        '207':
+          description: some assignments fail
+        '422':
+          description: rejects entries that include training_id
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assignments:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      user_id:
+                        type: integer
+                      external_id:
+                        type: string
+                      pco_id:
+                        type: string
+                      send_email:
+                        type: boolean
+                      upfront_payment:
+                        type: boolean
+              required:
+              - assignments
+  "/api/v3/trainings/bulk_assign":
+    post:
+      summary: Bulk assign multiple trainings
+      description: Assigns users to (potentially varying) trainings in a single request.
+        Every entry must include `training_id` plus exactly one of `user_id`, `external_id`,
+        or `pco_id`. Maximum 100 assignments per request.
+      tags:
+      - Trainings
+      parameters: []
+      responses:
+        '201':
+          description: stamps source_platform from api_key on every attempt
+        '207':
+          description: unavailable training surfaces as per-entry failure rather than
+            404
+        '422':
+          description: missing training_id on any assignment
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assignments:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - training_id
+                    properties:
+                      training_id:
+                        type: integer
+                        description: Training (Survey) ID
+                      user_id:
+                        type: integer
+                        description: MinistrySafe user ID
+                      external_id:
+                        type: string
+                        description: External user ID
+                      pco_id:
+                        type: string
+                        description: Planning Center user ID
+                      send_email:
+                        type: boolean
+                        description: Send assignment email (default false)
+                      upfront_payment:
+                        type: boolean
+                        description: Charge user upfront for the training
+              required:
+              - assignments
+  "/api/v3/users":
+    get:
+      summary: List users
+      description: Returns a paginated list of users in your organization. Supports
+        filtering by name, user type, tags, user ID, and external ID via `filter[]`
+        query parameters. Use the optional `include` query parameter to sideload related
+        data (e.g., `?include=trainings,background_checks,assigned_documents`).
+      tags:
+      - Users
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number (default 1)
+        schema:
+          type: integer
+      - name: page_size
+        in: query
+        required: false
+        description: Page size (default 25, max 100)
+        schema:
+          type: integer
+      - name: filter[name]
+        in: query
+        required: false
+        description: Search by name
+        schema:
+          type: string
+      - name: filter[user_type]
+        in: query
+        required: false
+        description: Filter by user type
+        schema:
+          type: string
+      - name: filter[tags]
+        in: query
+        required: false
+        description: Filter by tag name
+        schema:
+          type: string
+      - name: filter[id]
+        in: query
+        required: false
+        description: Filter by user ID
+        schema:
+          type: integer
+      - name: filter[external_id]
+        in: query
+        required: false
+        description: Filter by external ID
+        schema:
+          type: string
+      responses:
+        '200':
+          description: returns filtered results by external_id
+          content:
+            application/json:
+              examples:
+                paginated_list:
+                  value:
+                    data:
+                    - id: 1
+                      first_name: Jane
+                      last_name: Doe
+                      email: jane@example.com
+                      user_type: volunteer
+                      role: trainee
+                      external_id: EXT-001
+                      tags:
+                      - youth
+                    page: 1
+                    page_size: 25
+                    total_pages: 4
+                  summary: Paginated user list
+        '403':
+          description: invalid token
+          content:
+            application/json:
+              examples:
+                invalid_token:
+                  value:
+                    message: Invalid token. Please reauthenticate.
+                  summary: Invalid token
+    post:
+      summary: Create a user
+      description: Creates a new user in your organization. If a user with the same
+        `external_id` already exists, that user is updated instead (upsert behavior).
+      tags:
+      - Users
+      parameters: []
+      responses:
+        '201':
+          description: creates a new user
+          content:
+            application/json:
+              examples:
+                created_user:
+                  value:
+                    id: 1
+                    first_name: Jane
+                    last_name: Doe
+                    email: jane@example.com
+                    user_type: volunteer
+                    role: trainee
+                    external_id: EXT-001
+                    tags:
+                    - youth
+                  summary: Created user
+        '200':
+          description: updates an existing user when external_id matches
+        '422':
+          description: returns errors for invalid user
+          content:
+            application/json:
+              examples:
+                validation_errors:
+                  value:
+                    errors:
+                    - First name can't be blank
+                    - Last name can't be blank
+                    - External ID can't be blank
+                  summary: Validation errors
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    first_name:
+                      type: string
+                      example: Jane
+                    last_name:
+                      type: string
+                      example: Doe
+                    email:
+                      type: string
+                      example: jane@example.com
+                    external_id:
+                      type: string
+                      example: EXT-001
+                    role:
+                      type: string
+                      example: trainee
+                    user_type:
+                      type: string
+                      example: volunteer
+                    tag_list:
+                      type: string
+                      description: Comma-separated tag names
+                      example: youth
+                  required:
+                  - first_name
+                  - last_name
+                  - external_id
+              required:
+              - user
+            examples:
+              '0':
+                summary: New user
+                value:
+                  user:
+                    first_name: Jane
+                    last_name: Doe
+                    email: jane@example.com
+                    external_id: EXT-001
+                    role: trainee
+                    user_type: volunteer
+                    tag_list: youth
+  "/api/v3/users/{id}":
+    get:
+      summary: Get a user
+      description: Returns a single user by their MinistrySafe ID. Use the optional
+        `include` query parameter to sideload related data (e.g., `?include=trainings,background_checks,assigned_documents`).
+      tags:
+      - Users
+      parameters:
+      - name: id
+        in: path
+        description: User ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: returns user object
+          content:
+            application/json:
+              examples:
+                user:
+                  value:
+                    id: 1
+                    first_name: Jane
+                    last_name: Doe
+                    email: jane@example.com
+                    user_type: volunteer
+                    role: trainee
+                    external_id: EXT-001
+                    tags:
+                    - youth
+                  summary: User object
+        '404':
+          description: user not found in organization
+        '403':
+          description: invalid token
+    patch:
+      summary: Update a user
+      description: Updates one or more attributes on an existing user. Only the fields
+        included in the request body will be changed; omitted fields remain untouched.
+      tags:
+      - Users
+      parameters:
+      - name: id
+        in: path
+        description: User ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: updates user successfully
+          content:
+            application/json:
+              examples:
+                updated_user:
+                  value:
+                    id: 1
+                    first_name: Janet
+                    last_name: Doe
+                    email: jane@example.com
+                    user_type: volunteer
+                    role: trainee
+                    external_id: EXT-001
+                    tags:
+                    - leader
+                    - youth
+                  summary: Updated user
+        '422':
+          description: invalid user_type name
+        '404':
+          description: user not found
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    first_name:
+                      type: string
+                      example: Janet
+                    last_name:
+                      type: string
+                      example: Doe
+                    email:
+                      type: string
+                      example: jane@example.com
+                    external_id:
+                      type: string
+                      example: EXT-001
+                    role:
+                      type: string
+                      example: trainee
+                    user_type:
+                      type: string
+                      example: volunteer
+                    tag_list:
+                      type: string
+                      description: Comma-separated tag names
+                      example: youth,leader
+                    username:
+                      type: string
+                      description: Required when role is ssa or supervisor
+                      example: jane_doe
+            examples:
+              '0':
+                summary: Partial update
+                value:
+                  user:
+                    first_name: Janet
+                    tag_list: youth,leader
+  "/api/v3/users/bulk_create":
+    post:
+      summary: Create users in bulk
+      description: Creates multiple users in a single request. Returns per-user results.
+        If some users fail validation, a 207 Multi-Status response is returned with
+        individual success/error details.
+      tags:
+      - Users
+      parameters: []
+      responses:
+        '201':
+          description: creates all users successfully
+          content:
+            application/json:
+              examples:
+                all_success:
+                  value:
+                    results:
+                    - index: 0
+                      success: true
+                      user:
+                        id: 10
+                        first_name: Alice
+                        last_name: Smith
+                        email: alice@example.com
+                        user_type: employee
+                        role: trainee
+                        external_id: B-001
+                        tags: []
+                    - index: 1
+                      success: true
+                      user:
+                        id: 11
+                        first_name: Bob
+                        last_name: Jones
+                        email: bob@example.com
+                        user_type: employee
+                        role: trainee
+                        external_id: B-002
+                        tags: []
+                  summary: All created
+        '207':
+          description: partial success with some failures
+          content:
+            application/json:
+              examples:
+                partial_failure:
+                  value:
+                    results:
+                    - index: 0
+                      success: true
+                      user:
+                        id: 10
+                        first_name: Alice
+                        last_name: Smith
+                        email: alice@example.com
+                        user_type: employee
+                        role: trainee
+                        external_id: B-001
+                        tags: []
+                    - index: 1
+                      success: false
+                      errors:
+                      - First name can't be blank
+                      input:
+                        first_name: ''
+                        last_name: ''
+                        external_id: ''
+                  summary: Partial failure
+        '422':
+          description: missing users array
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                users:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      email:
+                        type: string
+                      external_id:
+                        type: string
+                      role:
+                        type: string
+                      user_type:
+                        type: string
+                      tag_list:
+                        type: string
+                    required:
+                    - first_name
+                    - last_name
+                    - external_id
+              required:
+              - users
+            examples:
+              '0':
+                summary: Two users
+                value:
+                  users:
+                  - first_name: Alice
+                    last_name: Smith
+                    email: alice@example.com
+                    external_id: B-001
+                  - first_name: Bob
+                    last_name: Jones
+                    email: bob@example.com
+                    external_id: B-002
+  "/api/v3/users/bulk_update":
+    patch:
+      summary: Update users in bulk
+      description: Updates multiple users in a single request. Each user in the array
+        must include either `id` or `external_id` for lookup. Returns per-user results
+        with 207 on partial failure.
+      tags:
+      - Users
+      parameters: []
+      responses:
+        '200':
+          description: looks up users by external_id
+          content:
+            application/json:
+              examples:
+                all_success:
+                  value:
+                    results:
+                    - index: 0
+                      success: true
+                      user:
+                        id: 10
+                        first_name: Alice-Updated
+                        last_name: Smith
+                        email: alice@example.com
+                        user_type: employee
+                        role: trainee
+                        external_id: B-001
+                        tags: []
+                    - index: 1
+                      success: true
+                      user:
+                        id: 11
+                        first_name: Bob
+                        last_name: Jones
+                        email: bob.new@example.com
+                        user_type: employee
+                        role: trainee
+                        external_id: B-002
+                        tags: []
+                  summary: All updated
+        '207':
+          description: partial success with not-found users
+          content:
+            application/json:
+              examples:
+                partial_failure:
+                  value:
+                    results:
+                    - index: 0
+                      success: true
+                      user:
+                        id: 10
+                        first_name: Alice-Updated
+                        last_name: Smith
+                        email: alice@example.com
+                        user_type: employee
+                        role: trainee
+                        external_id: B-001
+                        tags: []
+                    - index: 1
+                      success: false
+                      errors:
+                      - User not found. Each entry must include a valid "id" or "external_id".
+                      input:
+                        id: 999
+                        first_name: Ghost
+                  summary: User not found
+        '422':
+          description: missing users array
+        '403':
+          description: invalid token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                users:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        description: User ID (required if external_id not provided)
+                      external_id:
+                        type: string
+                        description: External ID (required if id not provided)
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+                      user_type:
+                        type: string
+                      tag_list:
+                        type: string
+                      username:
+                        type: string
+                        description: Required when role is ssa or supervisor
+              required:
+              - users
+            examples:
+              '0':
+                summary: Update by id and external_id
+                value:
+                  users:
+                  - id: 10
+                    first_name: Alice-Updated
+                  - external_id: B-002
+                    email: bob.new@example.com
+  "/api/v3/users/{id}/sign_in_link":
+    get:
+      summary: Get a refreshed sign-in link
+      description: Generates a fresh sign-in link for the specified user that expires
+        in approximately 5 minutes. The link allows the user to log in without entering
+        credentials. Returns the URL and its expiration timestamp.
+      tags:
+      - Users
+      parameters:
+      - name: id
+        in: path
+        description: User ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: returns sign-in link and expiration
+          content:
+            application/json:
+              examples:
+                sign_in_link:
+                  value:
+                    sign_in_link: https://www.ministrysafe.com/auth/token_login?token=abc123def456
+                    expires_at: '2026-02-01T12:35:00Z'
+                  summary: Sign-in link
+        '404':
+          description: user not found in organization
+        '403':
+          description: invalid token
+  "/api/v3/users/{id}/deactivate":
+    post:
+      summary: Deactivate a user
+      description: Deactivates a user, preventing them from logging in or being assigned
+        new trainings. Cannot deactivate the last SSA (System Admin) in an organization.
+      tags:
+      - Users
+      parameters:
+      - name: id
+        in: path
+        description: User ID
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: deactivates the user
+          content:
+            application/json:
+              examples:
+                deactivated:
+                  value:
+                    message: User deactivated
+                  summary: Success
+        '422':
+          description: cannot deactivate last SSA
+          content:
+            application/json:
+              examples:
+                last_ssa:
+                  value:
+                    errors:
+                    - Cannot deactivate the last SSA in the organization
+                  summary: Last SSA
+        '404':
+          description: user not found in organization
+        '403':
+          description: invalid token
+  "/api/v3/users/types":
+    get:
+      summary: Get available user types
+      description: Returns a paginated list of user types configured for your organization,
+        including their names and associated background check type.
+      tags:
+      - Users
+      parameters:
+      - name: page
+        in: query
+        required: false
+        description: Page number (default 1)
+        schema:
+          type: integer
+      - name: page_size
+        in: query
+        required: false
+        description: Page size (default 25, max 100)
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: returns paginated user types
+          content:
+            application/json:
+              examples:
+                user_types:
+                  value:
+                    data:
+                    - id: 1
+                      name:
+                        en: Employee
+                        es: Empleado
+                      background_check_type: employee
+                    - id: 2
+                      name:
+                        en: Volunteer
+                        es: Voluntario
+                      background_check_type: volunteer
+                    page: 1
+                    page_size: 25
+                    total_pages: 1
+                  summary: User types
+        '403':
+          description: invalid token
+servers:
+- url: https://staging.ministrysafe.com
+- url: https://www.ministrysafe.com
+components:
+  securitySchemes:
+    bearer_auth:
+      type: http
+      scheme: bearer
+      description: API key or OAuth2 bearer token
+security:
+- bearer_auth: []
+
