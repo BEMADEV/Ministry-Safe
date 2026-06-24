@@ -64,7 +64,8 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             var serverLink = serverUrl.IsNullOrWhiteSpace() ? MinistrySafeConstants.MINISTRYSAFE_APISERVER : serverUrl;
             var restClient = new RestClient( serverLink );
 
-            restClient.AddDefaultHeader( "Authorization", string.Format( "Token token={0}", token ) );
+            // V3 API uses Bearer token authentication instead of Token token=X format
+            restClient.AddDefaultHeader( "Authorization", string.Format( "Bearer {0}", token ) );
             return restClient;
         }
 
@@ -122,7 +123,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         #region Public Methods
 
         /// <summary>
-        /// Gets the packages.
+        /// Gets a single user by ID (V3 compatible).
         /// </summary>
         /// <param name="userId">The user identifier.</param>
         /// <param name="getUserResponse">The get user response.</param>
@@ -147,6 +148,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
+            // V3 API returns individual user directly (not paginated)
             getUserResponse = JsonConvert.DeserializeObject<UserResponse>( restResponse.Content );
             if ( getUserResponse == null )
             {
@@ -158,42 +160,57 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         }
 
         /// <summary>
-        /// Gets the packages.
+        /// Gets the users with pagination support for V3 API.
         /// </summary>
         /// <param name="getUsersResponse">The get users response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         internal static bool GetUsers( out List<UserResponse> getUsersResponse, List<string> errorMessages )
         {
-            getUsersResponse = null;
+            getUsersResponse = new List<UserResponse>();
             RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_USERS_URL );
-            IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
-            {
-                errorMessages.Add( "Failed to authorize MinistrySafe. Please confirm your access token." );
-                return false;
-            }
+            int currentPage = 1;
+            int totalPages = 1;
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            // V3 API uses pagination - loop through all pages
+            while ( currentPage <= totalPages )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Users: " + restResponse.Content );
-                return false;
-            }
+                RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_USERS_URL );
+                restRequest.AddQueryParameter( "page", currentPage.ToString() );
+                restRequest.AddQueryParameter( "page_size", "100" ); // Max page size
 
-            getUsersResponse = JsonConvert.DeserializeObject<List<UserResponse>>( restResponse.Content );
-            if ( getUsersResponse == null )
-            {
-                errorMessages.Add( "Get Users is not valid: " + restResponse.Content );
-                return false;
+                IRestResponse restResponse = restClient.Execute( restRequest );
+
+                if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+                {
+                    errorMessages.Add( "Failed to authorize MinistrySafe. Please confirm your access token." );
+                    return false;
+                }
+
+                if ( restResponse.StatusCode != HttpStatusCode.OK )
+                {
+                    errorMessages.Add( "Failed to get MinistrySafe Users: " + restResponse.Content );
+                    return false;
+                }
+
+                var paginatedResponse = JsonConvert.DeserializeObject<PaginatedResponse<UserResponse>>( restResponse.Content );
+                if ( paginatedResponse == null || paginatedResponse.Data == null )
+                {
+                    errorMessages.Add( "Get Users is not valid: " + restResponse.Content );
+                    return false;
+                }
+
+                getUsersResponse.AddRange( paginatedResponse.Data );
+                totalPages = paginatedResponse.TotalPages;
+                currentPage++;
             }
 
             return true;
         }
 
         /// <summary>
-        /// Gets the packages.
+        /// Gets the packages (V2 only - may not exist in V3 API).
         /// </summary>
         /// <param name="getPackagesResponse">The get packages response.</param>
         /// <param name="errorMessages">The error messages.</param>
@@ -211,24 +228,31 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            if ( restResponse.StatusCode == HttpStatusCode.OK )
+            {
+                getPackagesResponse = JsonConvert.DeserializeObject<List<PackageResponse>>( restResponse.Content );
+                if ( getPackagesResponse == null )
+                {
+                    errorMessages.Add( "Get Packages is not valid: " + restResponse.Content );
+                    return false;
+                }
+                return true;
+            }
+            else if ( restResponse.StatusCode == HttpStatusCode.NotFound )
+            {
+                // V3 API may not have this endpoint
+                errorMessages.Add( "Get Packages endpoint not found. This V2 endpoint may not be available in V3 API." );
+                return false;
+            }
+            else
             {
                 errorMessages.Add( "Failed to get MinistrySafe Packages: " + restResponse.Content );
                 return false;
             }
-
-            getPackagesResponse = JsonConvert.DeserializeObject<List<PackageResponse>>( restResponse.Content );
-            if ( getPackagesResponse == null )
-            {
-                errorMessages.Add( "Get Packages is not valid: " + restResponse.Content );
-                return false;
-            }
-
-            return true;
         }
 
         /// <summary>
-        /// Gets the tags.
+        /// Gets the tags (V2 only - may not exist in V3 API).
         /// </summary>
         /// <param name="getTagsResponse">The get tags response.</param>
         /// <param name="errorMessages">The error messages.</param>
@@ -246,26 +270,33 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            if ( restResponse.StatusCode == HttpStatusCode.OK )
+            {
+                getTagsResponse = JsonConvert.DeserializeObject<List<TagResponse>>( restResponse.Content );
+                if ( getTagsResponse == null )
+                {
+                    errorMessages.Add( "Get Tags is not valid: " + restResponse.Content );
+                    return false;
+                }
+                return true;
+            }
+            else if ( restResponse.StatusCode == HttpStatusCode.NotFound )
+            {
+                // V3 API may not have this endpoint
+                errorMessages.Add( "Get Tags endpoint not found. This V2 endpoint may not be available in V3 API." );
+                return false;
+            }
+            else
             {
                 errorMessages.Add( "Failed to get MinistrySafe Tags: " + restResponse.Content );
                 return false;
             }
-
-            getTagsResponse = JsonConvert.DeserializeObject<List<TagResponse>>( restResponse.Content );
-            if ( getTagsResponse == null )
-            {
-                errorMessages.Add( "Get Tags is not valid: " + restResponse.Content );
-                return false;
-            }
-
-            return true;
         }
 
         /// <summary>
-        /// Gets the tags.
+        /// Gets the survey codes (V2 only - may not exist in V3 API).
         /// </summary>
-        /// <param name="getTagsResponse">The get tags response.</param>
+        /// <param name="getSurveyCodesResponse">The get survey codes response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool GetSurveyCodes( out List<SurveyCodeResponse> getSurveyCodesResponse, List<string> errorMessages )
@@ -281,20 +312,27 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            if ( restResponse.StatusCode == HttpStatusCode.OK )
+            {
+                getSurveyCodesResponse = JsonConvert.DeserializeObject<List<SurveyCodeResponse>>( restResponse.Content );
+                if ( getSurveyCodesResponse == null )
+                {
+                    errorMessages.Add( "Get Survey Codes is not valid: " + restResponse.Content );
+                    return false;
+                }
+                return true;
+            }
+            else if ( restResponse.StatusCode == HttpStatusCode.NotFound )
+            {
+                // V3 API may not have this endpoint
+                errorMessages.Add( "Get Survey Codes endpoint not found. This V2 endpoint may not be available in V3 API." );
+                return false;
+            }
+            else
             {
                 errorMessages.Add( "Failed to get MinistrySafe Survey Codes: " + restResponse.Content );
                 return false;
             }
-
-            getSurveyCodesResponse = JsonConvert.DeserializeObject<List<SurveyCodeResponse>>( restResponse.Content );
-            if ( getSurveyCodesResponse == null )
-            {
-                errorMessages.Add( "Get Survey Codes is not valid: " + restResponse.Content );
-                return false;
-            }
-
-            return true;
         }
 
         /// <summary>

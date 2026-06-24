@@ -45,37 +45,47 @@ namespace com.bemaservices.MinistrySafe.Constants
         /// <summary>
         /// The ministrysafe users URL
         /// </summary>
-        public const string MINISTRYSAFE_USERS_URL = "v2/users";
+        public const string MINISTRYSAFE_USERS_URL = "v3/users";
 
         /// <summary>
-        /// The packages URL
+        /// The packages URL (V2 only - may not exist in V3)
         /// </summary>
         public const string MINISTRYSAFE_PACKAGES_URL = "v2/custom_background_check_packages";
 
         /// <summary>
-        /// The ministrysafe tags URL
+        /// The ministrysafe tags URL (V2 only - may not exist in V3)
         /// </summary>
         public const string MINISTRYSAFE_TAGS_URL = "v2/tags";
 
         /// <summary>
-        /// The ministrysafe tags URL
+        /// The ministrysafe survey codes URL (V2 only - may not exist in V3)
         /// </summary>
         public const string MINISTRYSAFE_SURVEY_CODES_URL = "v2/survey_codes";
 
         /// <summary>
         /// The ministrysafe trainings URL
         /// </summary>
-        public const string MINISTRYSAFE_TRAININGS_URL = "v2/trainings";
+        public const string MINISTRYSAFE_TRAININGS_URL = "v3/trainings";
 
         /// <summary>
         /// The ministrysafe backgroundcheck URL
         /// </summary>
-        public const string MINISTRYSAFE_BACKGROUNDCHECK_URL = "v2/background_checks";
+        public const string MINISTRYSAFE_BACKGROUNDCHECK_URL = "v3/background_checks";
 
         /// <summary>
         /// The ministrysafe available levels URL
         /// </summary>
-        public const string MINISTRYSAFE_AVAILABLE_LEVELS_URL = "v2/background_checks/available_levels";
+        public const string MINISTRYSAFE_AVAILABLE_LEVELS_URL = "v3/background_checks/levels";
+
+        /// <summary>
+        /// The ministrysafe documents URL (V3)
+        /// </summary>
+        public const string MINISTRYSAFE_DOCUMENTS_URL = "v3/documents";
+
+        /// <summary>
+        /// The ministrysafe training attempts URL (V3)
+        /// </summary>
+        public const string MINISTRYSAFE_TRAINING_ATTEMPTS_URL = "v3/trainings/attempts";
 
         /// <summary>
         /// The ministrysafe workflow type name
