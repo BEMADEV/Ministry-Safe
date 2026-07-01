@@ -32,6 +32,7 @@ using Humanizer;
 using Newtonsoft.Json;
 using Rock;
 using Rock.Attribute;
+using Rock.Communication;
 using Rock.Data;
 using Rock.IpAddress;
 using Rock.Model;
@@ -121,6 +122,14 @@ namespace com.bemaservices.MinistrySafe
                     if ( !GetPerson( rockContext, workflow, personAttribute, out person, out personAliasId, errorMessages ) )
                     {
                         errorMessages.Add( "Unable to get Person." );
+                        UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
+                        return true;
+                    }
+
+                    if ( !EmailAddressFieldValidator.IsValid(person.Email))
+                    {
+                        errorMessages.Add( "Person does not have a valid email address." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
                         UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
@@ -1580,6 +1589,14 @@ namespace com.bemaservices.MinistrySafe
                     {
                         errorMessages.Add( "Unable to get Person." );
                         UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
+                        return true;
+                    }
+
+                    if ( !EmailAddressFieldValidator.IsValid( person.Email ) )
+                    {
+                        errorMessages.Add( "Person does not have a valid email address." );
+                        UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
+                        UpdateWorkflowRequestMessage( workflow, rockContext, errorMessages.AsDelimited( ", " ) );
                         return true;
                     }
 
