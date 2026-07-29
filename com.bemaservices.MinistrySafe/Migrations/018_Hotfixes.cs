@@ -44,6 +44,14 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.AddActionTypeAttributeValue( "44B246E6-5EA9-4562-B4A5-6EC14340C350", "3DF1CCE7-5A18-4DC5-9DD5-6F34CEAB40B6", @"{{ 'Now' | Date:'yyyy-MM-ddTHH:mm:ss' }}" ); // Awareness Training (MinistrySafe):Process Result:Add Step if Does Not Exist:Start Date|Attribute Value
             RockMigrationHelper.AddActionTypeAttributeValue( "15C6C2E1-99F0-4A40-91E4-F2175FF9A7B9", "0415C959-BF89-4D19-9C47-3AB1098E1FBA", @"{{ 'Now' | Date:'yyyy-MM-ddTHH:mm:ss' }}" ); // Awareness Training (MinistrySafe):Process Result:Complete Step:Property Value|Property Value Attribute
             RockMigrationHelper.AddActionTypeAttributeValue( "2C33553C-CF30-47A2-B1AF-21C73DDBA83E", "94689BDE-493E-4869-A614-2D54822D747C", @"{{ 'Now' | Date:'yyyy-MM-ddTHH:mm:ss' }}" ); // Awareness Training (MinistrySafe):Send Reminder and Close Workflow:Set Training Request Date:Value|Attribute Value
+
+            RockMigrationHelper.DeleteWorkflowActionType( "81D800B4-1E84-4C4A-A3C6-71EE0A84F27A" ); // Background Check (MinistrySafe):Submit Request:Launch Expiration Handling
+            RockMigrationHelper.DeleteWorkflowActionType( "9EEC1893-684E-455A-8692-E19C1CF7A4F8" ); // Background Check (MinistrySafe):Handle Expired Result:Delay 1 Week
+            RockMigrationHelper.DeleteWorkflowActionType( "DE5565A0-4DE5-4C71-98A5-8605B807388B" ); // Background Check (MinistrySafe):Handle Expired Result:Complete Activity if Background Check has been completed
+            RockMigrationHelper.DeleteWorkflowActionType( "15CEB2DC-460D-46F7-A4E3-87AA42627721" ); // Background Check (MinistrySafe):Handle Expired Result:Notify Requester
+            RockMigrationHelper.DeleteWorkflowActionType( "767B03F0-D3C4-448D-AB8A-EFF907EF770C" ); // Background Check (MinistrySafe):Handle Expired Result:Complete Workflow
+
+            RockMigrationHelper.DeleteWorkflowActivityType( "11095333-04F2-4594-9681-403AA98EA48E" ); // Background Check (MinistrySafe):Handle Expired Result
         }
 
 
