@@ -26,8 +26,12 @@ using System.Net;
 using System.Text;
 using com.bemaservices.MinistrySafe.Constants;
 using com.bemaservices.MinistrySafe.Migrations;
+using com.bemaservices.MinistrySafe.MinistrySafeApi;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V2;
-using com.bemaservices.MinistrySafe.MinistrySafeApi.V2.Obsolete;
+using com.bemaservices.MinistrySafe.MinistrySafeApi.V3;
+using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.BackgroundChecks;
+using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Trainings;
+using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Users;
 using com.bemaservices.MinistrySafe.Model;
 using Humanizer;
 using Newtonsoft.Json;
@@ -258,10 +262,10 @@ namespace com.bemaservices.MinistrySafe
 
             if ( isAuthorized )
             {
-                BackgroundCheckResponse getDocumentResponse;
+                BackgroundCheckV3 getDocumentResponse;
                 List<string> errorMessages = new List<string>();
 
-                if ( MinistrySafeApiUtility.GetBackgroundCheck( backgroundCheckId, out getDocumentResponse, errorMessages ) )
+                if ( ApiHelper.GetBackgroundCheck( backgroundCheckId.AsInteger(), out getDocumentResponse, errorMessages ) )
                 {
                     return getDocumentResponse.ResultsUrl;
                 }
@@ -377,53 +381,6 @@ namespace com.bemaservices.MinistrySafe
                         }
                     }
 
-                    //// Set the background check type if blank
-                    //if ( workflow.GetAttributeValue( "SurveyType" ).IsNullOrWhiteSpace() )
-                    //{
-                    //    DefinedValueCache definedValue = null;
-                    //    var definedType = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.BACKGROUND_CHECK_TYPES.AsGuid() );
-
-                    //    // Match on custom package code
-                    //    if ( customPackageCode.IsNotNullOrWhiteSpace() )
-                    //    {
-                    //        definedValue = definedType.DefinedValues.Where( dv => dv.AttributeValues.ContainsKey( "MinistrySafePackageCode" ) &&
-                    //                dv.AttributeValues["MinistrySafePackageCode"].Value == customPackageCode )
-                    //            .FirstOrDefault();
-                    //    }
-
-                    //    // Else match on Level and User Type
-                    //    if ( definedValue == null && level.HasValue )
-                    //    {
-                    //        var levelString = level.ToString();
-                    //        var levelMatches = definedType.DefinedValues.Where( dv => dv.AttributeValues.ContainsKey( "MinistrySafePackageLevel" ) &&
-                    //                dv.AttributeValues["MinistrySafePackageLevel"].Value == levelString );
-                    //        if ( userType.IsNotNullOrWhiteSpace() )
-                    //        {
-                    //            var userTypeDefinedType = DefinedTypeCache.Get( "559E79C6-2EAB-4A0D-A16F-59D9B63F002F".AsGuid() );
-                    //            var userTypeDefinedValue = userTypeDefinedType.DefinedValues.Where( dv => dv.Value == userType ).FirstOrDefault();
-                    //            if ( userTypeDefinedValue != null )
-                    //            {
-                    //                var userTypeGuid = userTypeDefinedValue.Guid.ToString();
-                    //                definedValue = levelMatches.Where( dv => dv.AttributeValues.ContainsKey( "MinistrySafeUserType" ) &&
-                    //                        dv.AttributeValues["MinistrySafeUserType"].Value == userTypeGuid )
-                    //                    .FirstOrDefault();
-                    //            }
-                    //        }
-
-                    //        // Fall back to first available background check type of that level
-                    //        if ( definedValue == null )
-                    //        {
-                    //            definedValue = levelMatches.FirstOrDefault();
-                    //        }
-                    //    }
-
-                    //    if ( definedValue != null )
-                    //    {
-                    //        SaveAttributeValue( workflow, "PackageType", definedValue.Guid.ToString(),
-                    //                FieldTypeCache.Get( Rock.SystemGuid.FieldType.DEFINED_VALUE.AsGuid() ), rockContext );
-                    //    }
-                    //}
-
                     rockContext.WrapTransaction( () =>
                     {
                         rockContext.SaveChanges();
@@ -497,7 +454,7 @@ namespace com.bemaservices.MinistrySafe
         /// </summary>
         /// <param name="backgroundCheckWebhook">The background check webhook.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        private static bool UpdateBackgroundCheckAndWorkFlow( BackgroundCheckWebhook backgroundCheckWebhook, int? interactionId = null )
+        private static bool UpdateBackgroundCheckFromWebhook( BackgroundCheckV3_Webhook backgroundCheckWebhook, int? interactionId = null )
         {
             try
             {
@@ -514,12 +471,15 @@ namespace com.bemaservices.MinistrySafe
                 LogMessageToDebuggingInteraction( interactionId, "Loaded Background Check Properties from Webhook Data." );
 
                 bool? tazworkFlagged = null;
-                BackgroundCheckResponse getDocumentResponse;
+                BackgroundCheckV3 backgroundCheckApi;
                 List<string> errorMessages = new List<string>();
 
-                if ( MinistrySafeApiUtility.GetBackgroundCheck( backgroundCheckWebhook.Id, out getDocumentResponse, errorMessages ) )
+                if ( ApiHelper.GetBackgroundCheck( backgroundCheckWebhook.Id, out backgroundCheckApi, errorMessages ) )
                 {
-                    tazworkFlagged = getDocumentResponse.TazworkFlagged;
+                    tazworkFlagged = backgroundCheckApi.TazworkFlagged;
+                    level = backgroundCheckApi.Level;
+                    customPackageCode = backgroundCheckApi.CustomBackgroundCheckPackageCode;
+                    orderDate = backgroundCheckApi.OrderDate;
                 }
                 else
                 {
@@ -854,18 +814,18 @@ namespace com.bemaservices.MinistrySafe
         /// </summary>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        public static bool UpdatePackages( List<string> errorMessages )
+        public static bool UpdateAvailableLevels( List<string> errorMessages )
         {
-            List<PackageResponse> customPackageResponseList;
+            List<AvailableLevelsV3> availableLevels;
 
-            if ( !MinistrySafeApiUtility.GetPackages( out customPackageResponseList, errorMessages ) )
+            if ( !ApiHelper.GetAvailableLevels( out availableLevels, errorMessages ) )
             {
                 //return false;
             }
 
-            if ( customPackageResponseList == null )
+            if ( availableLevels == null )
             {
-                customPackageResponseList = new List<PackageResponse>();
+                availableLevels = new List<AvailableLevelsV3>();
             }
 
             var defaultPackageResponseList = new List<PackageResponse>();
@@ -1056,7 +1016,7 @@ namespace com.bemaservices.MinistrySafe
         {
             List<TagV2> tagResponseList;
 
-            if ( !MinistrySafeApiUtility.GetTags( out tagResponseList, errorMessages ) )
+            if ( !ApiHelper.GetTags( out tagResponseList, errorMessages ) )
             {
                 //return false;
             }
@@ -2023,7 +1983,7 @@ namespace com.bemaservices.MinistrySafe
         /// </summary>
         /// <param name="trainingWebhook">The training webhook.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        private static bool UpdateTrainingFromWebhook( TrainingWebhook trainingWebhook )
+        private static bool UpdateTrainingFromWebhook( TrainingAssignmentV3_Webhook trainingWebhook )
         {
             var externalId = trainingWebhook.ExternalId;
             var userId = trainingWebhook.UserId;
@@ -2744,19 +2704,27 @@ namespace com.bemaservices.MinistrySafe
         /// <param name="directLoginUrl">The direct login URL.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        public static bool GetOrCreateUser( Rock.Model.Workflow workflow, Person person, int personAliasId, string userTypeName, string tagList, out string candidateId, out string directLoginUrl, List<string> errorMessages )
+        public static bool GetOrCreateUser( Rock.Model.Workflow workflow, Person person, int personAliasId, string userTypeName, string tagList, out int? candidateId, List<string> errorMessages )
         {
-            UserResponse userResponse;
+            UserV3 userResponse;
             candidateId = null;
-            directLoginUrl = null;
-            if ( MinistrySafeApiUtility.GetUser( workflow, person, personAliasId, out userResponse, errorMessages ) )
+            var externalId = "pa" + personAliasId.ToString();
+            if ( ApiHelper.GetUserByExternalId( externalId, out userResponse, errorMessages ) )
             {
                 candidateId = userResponse.Id;
-                directLoginUrl = userResponse.DirectLoginUrl;
 
                 if ( tagList.IsNotNullOrWhiteSpace() )
                 {
-                    if ( MinistrySafeApiUtility.UpdateUser( candidateId.AsInteger(), person.Email, tagList, out errorMessages ) )
+                    if ( ApiHelper.UpdateUser( candidateId.Value,
+                        null, // person.FirstName
+                        null, // person.LastName
+                        person.Email,
+                        null, // externalId
+                        null, // role
+                        null, // userType
+                        tagList,
+                        out userResponse,
+                        out errorMessages ) )
                     {
                         return true;
                     }
@@ -2771,10 +2739,9 @@ namespace com.bemaservices.MinistrySafe
             }
             else
             {
-                if ( MinistrySafeApiUtility.CreateUser( workflow, person, personAliasId, userTypeName, tagList, out userResponse, errorMessages ) )
+                if ( ApiHelper.CreateUser( person, personAliasId, userTypeName, tagList, out userResponse, errorMessages ) )
                 {
                     candidateId = userResponse.Id;
-                    directLoginUrl = userResponse.DirectLoginUrl;
                     return true;
                 }
             }
@@ -2810,7 +2777,7 @@ namespace com.bemaservices.MinistrySafe
                 );
 
             // Try casting as Training
-            TrainingWebhook trainingWebhook = JsonConvert.DeserializeObject<TrainingWebhook>( postedData, new JsonSerializerSettings()
+            TrainingAssignmentV3_Webhook trainingWebhook = JsonConvert.DeserializeObject<TrainingAssignmentV3_Webhook>( postedData, new JsonSerializerSettings()
             {
                 Error = ( sender, errorEventArgs ) =>
                 {
@@ -2826,7 +2793,7 @@ namespace com.bemaservices.MinistrySafe
             }
 
             // Try casting as Background Check
-            BackgroundCheckWebhook backgroundCheckWebhook = JsonConvert.DeserializeObject<BackgroundCheckWebhook>( postedData, new JsonSerializerSettings()
+            BackgroundCheckV3_Webhook backgroundCheckWebhook = JsonConvert.DeserializeObject<BackgroundCheckV3_Webhook>( postedData, new JsonSerializerSettings()
             {
                 Error = ( sender, errorEventArgs ) =>
                 {
@@ -2838,7 +2805,7 @@ namespace com.bemaservices.MinistrySafe
             if ( backgroundCheckWebhook != null )
             {
                 responseMessage = "Valid Background Check Data Received";
-                return UpdateBackgroundCheckAndWorkFlow( backgroundCheckWebhook, interactionId );
+                return UpdateBackgroundCheckFromWebhook( backgroundCheckWebhook, interactionId );
             }
 
             // Return Invalid Data
@@ -2890,11 +2857,11 @@ namespace com.bemaservices.MinistrySafe
                         return true;
                     }
 
-                    UserResponse userResponse;
-                    if ( MinistrySafeApiUtility.GetUser( workflow, person, personAliasId.Value, out userResponse, errorMessages ) )
+                    UserV3 userResponse;
+                    if ( ApiHelper.GetUserByExternalId( "pa" + person.PrimaryAliasId, out userResponse, errorMessages ) )
                     {
                         var rockTagList = tagList.SplitDelimitedValues().ToList();
-                        var ministrySafeTagList = userResponse.TagList;
+                        var ministrySafeTagList = userResponse.Tags;
                         rockTagList.AddRange( ministrySafeTagList );
                         var newTagDefinedValueGuids = DefinedTypeCache.Get( com.bemaservices.MinistrySafe.Constants.MinistrySafeSystemGuid.MINISTRYSAFE_TAGS ).DefinedValues
                             .Where( dv => rockTagList.Contains( dv.Value ) )

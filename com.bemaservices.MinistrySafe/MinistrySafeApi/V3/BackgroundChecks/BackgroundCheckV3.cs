@@ -39,6 +39,12 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3.BackgroundChecks
         public string ApplicantInterfaceUrl { get; set; }
 
         /// <summary>
+        /// Gets or sets the results URL
+        /// </summary>
+        [JsonProperty( "results_url" )]
+        public string ResultsUrl { get; set; }
+
+        /// <summary>
         /// Gets or sets the payment status
         /// </summary>
         [JsonProperty( "payment_status" )]

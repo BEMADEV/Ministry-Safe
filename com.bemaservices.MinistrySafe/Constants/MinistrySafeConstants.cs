@@ -58,11 +58,6 @@ namespace com.bemaservices.MinistrySafe.Constants
         public const string MINISTRYSAFE_TAGS_URL = "v2/tags";
 
         /// <summary>
-        /// The ministrysafe survey codes URL (V2 only - may not exist in V3)
-        /// </summary>
-        public const string MINISTRYSAFE_SURVEY_CODES_URL = "v2/survey_codes";
-
-        /// <summary>
         /// The ministrysafe trainings URL
         /// </summary>
         public const string MINISTRYSAFE_TRAININGS_URL = "v3/trainings";

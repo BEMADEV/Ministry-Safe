@@ -18,12 +18,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using com.bemaservices.MinistrySafe.Constants;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V2;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V3;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.BackgroundChecks;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Response;
+using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Trainings;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Users;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -233,7 +235,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="getBackgroundCheckV3">The get background check response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal static bool GetBackgroundCheck( string backgroundCheckId, out BackgroundCheckV3 getBackgroundCheckV3, List<string> errorMessages )
+        internal static bool GetBackgroundCheck( int backgroundCheckId, out BackgroundCheckV3 getBackgroundCheckV3, List<string> errorMessages )
         {
             getBackgroundCheckV3 = null;
             RestClient restClient = RestClient();
@@ -464,11 +466,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="getTagsResponse">The get tags response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal static bool GetSurveyTypes( out List<string> getSurveyTypesResponse, List<string> errorMessages )
+        internal static bool GetTrainingTypes( int pageNumber,
+            out List<TrainingTypeV3> trainingTypeList,
+            List<string> errorMessages )
         {
-            getSurveyTypesResponse = null;
+            trainingTypeList = new List<TrainingTypeV3>();
             RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_SURVEY_TYPES_URL );
+            RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_TRAININGS_URL );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
             if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
@@ -479,15 +483,27 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             if ( restResponse.StatusCode != HttpStatusCode.OK )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Survey Types: " + restResponse.Content );
+                errorMessages.Add( "Failed to get MinistrySafe Training Types: " + restResponse.Content );
                 return false;
             }
 
-            getSurveyTypesResponse = JsonConvert.DeserializeObject<List<string>>( restResponse.Content );
-            if ( getSurveyTypesResponse == null )
+            var paginatedResponse = JsonConvert.DeserializeObject<PaginatedResponseV3<TrainingTypeV3>>( restResponse.Content );
+            if ( paginatedResponse == null )
             {
-                errorMessages.Add( "Get Survey Types is not valid: " + restResponse.Content );
+                errorMessages.Add( "Get All Background Checks Response is not valid: " + restResponse.Content );
                 return false;
+            }
+
+            trainingTypeList.AddRange( paginatedResponse.Data );
+
+            if ( paginatedResponse.Page < paginatedResponse.TotalPages )
+            {
+                List<TrainingTypeV3> nextPageTrainingTypes;
+                if ( !GetTrainingTypes( pageNumber + 1, out nextPageTrainingTypes, errorMessages ) )
+                {
+                    return false;
+                }
+                trainingTypeList.AddRange( nextPageTrainingTypes );
             }
 
             return true;
@@ -501,12 +517,20 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="assignTrainingResponse">The assign training response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        internal static bool AssignTraining( string candidateId, string surveyCode, out TrainingResponse assignTrainingResponse, List<string> errorMessages )
+        internal static bool AssignTraining(
+            int userId,
+            string trainingId,
+            List<string> errorMessages )
         {
-            assignTrainingResponse = null;
             RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}/assign_training", MinistrySafeConstants.MINISTRYSAFE_USERS_URL, candidateId ), Method.POST );
-            restRequest.AddParameter( "survey_code", surveyCode );
+            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}/assign", MinistrySafeConstants.MINISTRYSAFE_TRAININGS_URL, trainingId ), Method.POST );
+
+            var trainingAssignment = new TrainingAssignmentV3();
+            trainingAssignment.UserId = userId;
+            trainingAssignment.SendEmail = false;
+            trainingAssignment.UpfrontPayment = true;
+
+            restRequest.AddJsonBody( trainingAssignment );
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
@@ -522,7 +546,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            assignTrainingResponse = JsonConvert.DeserializeObject<TrainingResponse>( restResponse.Content );
+            var assignTrainingResponse = JsonConvert.DeserializeObject<MessageResponseV3>( restResponse.Content );
             if ( assignTrainingResponse == null )
             {
                 errorMessages.Add( "Assign Training Response is not valid: " + restResponse.Content );
@@ -541,21 +565,38 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="getAllTrainingResponses">The get all training responses.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal static bool GetAllTrainings( int pageNumber, DateTime? startDate, DateTime? endDate, out List<GetAllTrainingResponse> getAllTrainingResponses, List<string> errorMessages )
+        internal static bool GetAllTrainings(
+            int pageNumber,
+            DateTime? startDate,
+            DateTime? endDate,
+            int? userId,
+            string trainingCode,
+            out List<TrainingAttemptV3> trainingAttemptList,
+            List<string> errorMessages )
         {
-            getAllTrainingResponses = new List<GetAllTrainingResponse>();
+            trainingAttemptList = new List<TrainingAttemptV3>();
             RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_TRAININGS_URL, Method.GET );
+            RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_TRAINING_ATTEMPTS_URL, Method.GET );
             restRequest.AddParameter( "page", pageNumber );
 
             if ( startDate.HasValue )
             {
-                restRequest.AddParameter( "start_date", startDate.ToShortDateString() );
+                restRequest.AddParameter( "filter[start_date]", startDate.ToISO8601DateString() );
             }
 
             if ( endDate.HasValue )
             {
-                restRequest.AddParameter( "end_date", endDate.ToShortDateString() );
+                restRequest.AddParameter( "filter[end_date]", endDate.ToISO8601DateString() );
+            }
+
+            if ( userId.HasValue )
+            {
+                restRequest.AddParameter( "filter[user_id]", userId.Value );
+            }
+
+            if ( trainingCode.IsNotNullOrWhiteSpace() )
+            {
+                restRequest.AddParameter( "filter[training_code]", trainingCode );
             }
 
             IRestResponse restResponse = restClient.Execute( restRequest );
@@ -572,11 +613,23 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            getAllTrainingResponses = JsonConvert.DeserializeObject<List<GetAllTrainingResponse>>( restResponse.Content );
-            if ( getAllTrainingResponses == null )
+            var paginatedResponse = JsonConvert.DeserializeObject<PaginatedResponseV3<TrainingAttemptV3>>( restResponse.Content );
+            if ( paginatedResponse == null )
             {
-                errorMessages.Add( "Get All Training Response is not valid: " + restResponse.Content );
+                errorMessages.Add( "Get All Trainings Response is not valid: " + restResponse.Content );
                 return false;
+            }
+
+            trainingAttemptList.AddRange( paginatedResponse.Data );
+
+            if ( paginatedResponse.Page < paginatedResponse.TotalPages )
+            {
+                List<TrainingAttemptV3> nextPageTrainingAttempts;
+                if ( !GetAllTrainings( pageNumber + 1, startDate, endDate, userId, trainingCode, out nextPageTrainingAttempts, errorMessages ) )
+                {
+                    return false;
+                }
+                trainingAttemptList.AddRange( nextPageTrainingAttempts );
             }
 
             return true;
@@ -590,12 +643,20 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="resendTrainingResponse">The resend training response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal static bool ResendTraining( string candidateId, string surveyCode, out TrainingResponse resendTrainingResponse, List<string> errorMessages )
+        internal static bool ResendTraining(
+            int userId,
+            string trainingId,
+            List<string> errorMessages )
         {
-            resendTrainingResponse = null;
             RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}/resend_training", MinistrySafeConstants.MINISTRYSAFE_USERS_URL, candidateId ), Method.POST );
-            restRequest.AddParameter( "survey_code", surveyCode );
+            RestRequest restRequest = new RestRequest( String.Format( "{0}/assign", MinistrySafeConstants.MINISTRYSAFE_TRAININGS_URL, trainingId ), Method.POST );
+
+            var trainingAssignment = new TrainingAssignmentV3();
+            trainingAssignment.UserId = userId;
+            trainingAssignment.SendEmail = false;
+            trainingAssignment.UpfrontPayment = true;
+
+            restRequest.AddJsonBody( trainingAssignment );
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
@@ -607,11 +668,11 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             if ( restResponse.StatusCode != HttpStatusCode.Created )
             {
-                errorMessages.Add( "Failed to resend MinistrySafe Training: " + restResponse.Content );
+                errorMessages.Add( "Failed to Resend MinistrySafe Training: " + restResponse.Content );
                 return false;
             }
 
-            resendTrainingResponse = JsonConvert.DeserializeObject<TrainingResponse>( restResponse.Content );
+            var resendTrainingResponse = JsonConvert.DeserializeObject<MessageResponseV3>( restResponse.Content );
             if ( resendTrainingResponse == null )
             {
                 errorMessages.Add( "Resend Training Response is not valid: " + restResponse.Content );
@@ -628,11 +689,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="getReportResponse">The get report response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal static bool GetTrainingForUser( string candidateId, out GetTrainingResponse getReportResponse, List<string> errorMessages )
+        internal static bool GetTrainingAttempt(
+            string trainingAttemptId,
+            out TrainingAttemptV3 trainingAttempt,
+            List<string> errorMessages )
         {
-            getReportResponse = null;
+            trainingAttempt = null;
             RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}/trainings", MinistrySafeConstants.MINISTRYSAFE_USERS_URL, candidateId ) );
+            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}", MinistrySafeConstants.MINISTRYSAFE_TRAINING_ATTEMPTS_URL, trainingAttemptId ) );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
             if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
@@ -647,8 +711,8 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            getReportResponse = JsonConvert.DeserializeObject<GetTrainingResponse>( restResponse.Content );
-            if ( getReportResponse == null )
+            trainingAttempt = JsonConvert.DeserializeObject<TrainingAttemptV3>( restResponse.Content );
+            if ( trainingAttempt == null )
             {
                 errorMessages.Add( "Get Training is not valid: " + restResponse.Content );
                 return false;
@@ -668,11 +732,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="getUserResponse">The get user response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        internal static bool GetUser( string userId, out UserV3 user, List<string> errorMessages )
+        internal static bool GetUser( string userId,
+            out UserV3 user,
+            List<string> errorMessages )
         {
             user = null;
             RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}", MinistrySafeConstants.MINISTRYSAFE_USERS_URL, userId ) );
+            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}?include=trainings,background_checks", MinistrySafeConstants.MINISTRYSAFE_USERS_URL, userId ) );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
             if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
@@ -703,11 +769,22 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="getUsersResponse">The get users response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        internal static bool GetUsers( out List<UserResponse> getUsersResponse, List<string> errorMessages )
+        internal static bool GetUsers( int pageNumber,
+            string externalId,
+            out List<UserV3> userList,
+            List<string> errorMessages )
         {
-            getUsersResponse = null;
+            userList = null;
             RestClient restClient = RestClient();
             RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_USERS_URL );
+
+            if ( externalId.IsNotNullOrWhiteSpace() )
+            {
+                restRequest.AddParameter( "filter[external_id]", externalId );
+            }
+
+            restRequest.AddParameter( "include", "trainings,background_checks" );
+
             IRestResponse restResponse = restClient.Execute( restRequest );
 
             if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
@@ -722,15 +799,28 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            getUsersResponse = JsonConvert.DeserializeObject<List<UserResponse>>( restResponse.Content );
-            if ( getUsersResponse == null )
+            var paginatedResponse = JsonConvert.DeserializeObject<PaginatedResponseV3<UserV3>>( restResponse.Content );
+            if ( paginatedResponse == null )
             {
-                errorMessages.Add( "Get Users is not valid: " + restResponse.Content );
+                errorMessages.Add( "Get All Trainings Response is not valid: " + restResponse.Content );
                 return false;
+            }
+
+            userList.AddRange( paginatedResponse.Data );
+
+            if ( paginatedResponse.Page < paginatedResponse.TotalPages )
+            {
+                List<UserV3> nextPageUsers;
+                if ( !GetUsers( pageNumber + 1, externalId, out nextPageUsers, errorMessages ) )
+                {
+                    return false;
+                }
+                userList.AddRange( nextPageUsers );
             }
 
             return true;
         }
+
         /// <summary>
         /// Creates the candidate.
         /// </summary>
@@ -742,29 +832,63 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="createUserResponse">The create user response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        internal static bool CreateUser( Rock.Model.Workflow workflow, Person person, int personAliasId, string userType, string tagList, out UserResponse createUserResponse, List<string> errorMessages )
+        internal static bool CreateUser(
+            Person person,
+            int personAliasId,
+            string userType,
+            string tagList,
+            out UserV3 createUserResponse,
+            List<string> errorMessages )
+        {
+            var firstName = person.FirstName;
+            var lastName = person.LastName;
+            var email = person.Email;
+            var externalId = "pa" + personAliasId.ToString();
+
+            return CreateUser( firstName, lastName, email, externalId, null, userType, tagList, out createUserResponse, errorMessages );
+        }
+
+        internal static bool CreateUser(
+            string firstName,
+            string lastName,
+            string email,
+            string externalId,
+            string role,
+            string userType,
+            string tagList,
+            out UserV3 createUserResponse,
+            List<string> errorMessages )
         {
             createUserResponse = null;
             RestClient restClient = RestClient();
             RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_USERS_URL, Method.POST );
 
-            var createUserRequest = new CreateUserRequest()
+            var createUserRequest = new UserV3()
             {
-                first_name = person.FirstName,
-                last_name = person.LastName,
-                email = person.Email,
-                external_id = "pa" + personAliasId.ToString()
+                FirstName = firstName,
+                LastName = lastName,
+                Email = email,
+                ExternalId = externalId
             };
+
+            if ( role.IsNotNullOrWhiteSpace() )
+            {
+                createUserRequest.Role = role;
+            }
 
             if ( userType.IsNotNullOrWhiteSpace() )
             {
-                createUserRequest.user_type = userType;
+                createUserRequest.UserType = userType;
+            }
+
+            if ( tagList.IsNotNullOrWhiteSpace() )
+            {
+                createUserRequest.Tags = tagList.SplitDelimitedValues();
             }
 
             restRequest.AddJsonBody( new
             {
-                user = createUserRequest,
-                tag_list = tagList
+                user = createUserRequest
             } );
 
             IRestResponse restResponse = restClient.Execute( restRequest );
@@ -781,7 +905,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            createUserResponse = JsonConvert.DeserializeObject<UserResponse>( restResponse.Content );
+            createUserResponse = JsonConvert.DeserializeObject<UserV3>( restResponse.Content );
             if ( createUserResponse == null )
             {
                 errorMessages.Add( "Create User Response is not valid: " + restResponse.Content );
@@ -800,49 +924,21 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="userResponse">The user response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        public static bool GetUser( Rock.Model.Workflow workflow, Person person, int personAliasId, out UserResponse userResponse, List<string> errorMessages )
+        public static bool GetUserByExternalId(
+            string externalId,
+            out UserV3 user,
+            List<string> errorMessages )
         {
-            userResponse = null;
-            List<UserResponse> userResponseList = null;
-            RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_USERS_URL );
-            restRequest.AddParameter( "external_id", "pa" + personAliasId );
-
-            IRestResponse restResponse = restClient.Execute( restRequest );
-
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized || restResponse.StatusCode == HttpStatusCode.Forbidden )
+            user = null;
+            List<UserV3> userList = new List<UserV3>();
+            if ( !GetUsers( 1, externalId, out userList, errorMessages ) )
             {
-                errorMessages.Add( "Failed to authorize MinistrySafe. Please confirm your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
-            {
-                errorMessages.Add( "Failed to get MinistrySafe User: " + restResponse.Content );
-                return false;
-            }
+            user = userList.FirstOrDefault();
 
-            try
-            {
-                userResponseList = JsonConvert.DeserializeObject<List<UserResponse>>( restResponse.Content );
-            }
-            catch
-            {
-                UsersResponse usersResponse = JsonConvert.DeserializeObject<UsersResponse>( restResponse.Content );
-                if ( usersResponse != null )
-                {
-                    userResponseList = usersResponse.Users;
-                }
-            }
-
-            if ( userResponseList == null )
-            {
-                errorMessages.Add( "Get User is not valid: " + restResponse.Content );
-                return false;
-            }
-            userResponse = userResponseList.FirstOrDefault();
-
-            return userResponse != null;
+            return user != null;
         }
 
         /// <summary>
@@ -853,28 +949,83 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="tagList">The tag list.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal static bool UpdateUser( int candidateId, string email, string tagList, out List<string> errorMessages )
+        internal static bool UpdateUser(
+            int userId,
+            string firstName,
+            string lastName,
+            string email,
+            string externalId,
+            string role,
+            string userType,
+            string tagList,
+            out UserV3 userResponse,
+            out List<string> errorMessages )
         {
+            userResponse = null;
             errorMessages = new List<string>();
-
             RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}", MinistrySafeConstants.MINISTRYSAFE_USERS_URL, candidateId ), Method.PUT );
-            restRequest.AddHeader( "Cookie", "Path=/; Path=/" );
-            restRequest.AlwaysMultipartFormData = true;
-            restRequest.AddParameter( "user[email]", email );
-            restRequest.AddParameter( "tag_list", tagList );
-            IRestResponse restResponse = restClient.Execute( restRequest );
-            Console.WriteLine( restResponse.Content );
+            RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}", MinistrySafeConstants.MINISTRYSAFE_USERS_URL, userId ), Method.PATCH );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized || restResponse.StatusCode == HttpStatusCode.Forbidden )
+            var userRequest = new UserV3();
+
+            if ( firstName.IsNotNullOrWhiteSpace() )
             {
-                errorMessages.Add( "Failed to authorize MinistrySafe. Please confirm your access token." );
+                userRequest.FirstName = firstName;
+            }
+
+            if ( lastName.IsNotNullOrWhiteSpace() )
+            {
+                userRequest.LastName = lastName;
+            }
+
+            if ( email.IsNotNullOrWhiteSpace() )
+            {
+                userRequest.Email = email;
+            }
+
+            if ( externalId.IsNotNullOrWhiteSpace() )
+            {
+                userRequest.ExternalId = externalId;
+            }
+
+            if ( role.IsNotNullOrWhiteSpace() )
+            {
+                userRequest.Role = role;
+            }
+
+            if ( userType.IsNotNullOrWhiteSpace() )
+            {
+                userRequest.UserType = userType;
+            }
+
+            if ( tagList.IsNotNullOrWhiteSpace() )
+            {
+                userRequest.Tags = tagList.SplitDelimitedValues();
+            }
+
+            restRequest.AddJsonBody( new
+            {
+                user = userRequest
+            } );
+
+            IRestResponse restResponse = restClient.Execute( restRequest );
+
+            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            {
+                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK && restResponse.StatusCode != HttpStatusCode.NoContent )
+            if ( restResponse.StatusCode != HttpStatusCode.OK )
             {
-                errorMessages.Add( "Failed to update User: " + restResponse.Content );
+                errorMessages.Add( "Failed to update MinistrySafe User: " + restResponse.Content );
+                return false;
+            }
+
+            userResponse = JsonConvert.DeserializeObject<UserV3>( restResponse.Content );
+            if ( userResponse == null )
+            {
+                errorMessages.Add( "Update User Response is not valid: " + restResponse.Content );
                 return false;
             }
 
