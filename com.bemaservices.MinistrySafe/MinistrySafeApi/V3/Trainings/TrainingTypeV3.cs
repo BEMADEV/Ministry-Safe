@@ -14,6 +14,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Trainings
         [JsonProperty( "short_name" )]
         public string ShortName { get; set; }
 
+        //TODO: Not implemented in API v3 yet
+        /// <summary>
+        /// Gets or sets the step type name
+        /// </summary>
+        [JsonProperty( "description" )]
+        public string Description { get; set; }
+
         /// <summary>
         /// Gets or sets the step type code
         /// </summary>

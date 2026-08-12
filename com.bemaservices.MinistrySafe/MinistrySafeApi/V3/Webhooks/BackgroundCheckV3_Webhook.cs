@@ -39,11 +39,19 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3.BackgroundChecks
         [JsonProperty( "results_url" )]
         public string ResultsUrl { get; set; }
 
+        // TODO: Not implemented in the API yet, but will be in the future.
+        [JsonProperty( "tazwork_flagged" )]
+        public bool TazworkFlagged { get; set; }
+
+        // TODO: Not implemented in the API yet, but will be in the future.
+        [JsonProperty( "order_date" )]
+        public DateTime OrderDate { get; set; }
+
         /// <summary>
         /// Gets or sets the completion timestamp.
         /// </summary>
         [JsonProperty( "complete_date" )]
-        public string CompleteDate { get; set; }
+        public DateTime CompleteDate { get; set; }
 
         /// <summary>
         /// Gets or sets the new status event value (all-changes mode).

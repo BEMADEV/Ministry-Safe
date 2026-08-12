@@ -30,6 +30,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3
         [JsonProperty( "price" )]
         public decimal Price { get; set; }
 
+        [JsonProperty( "level" )]
+        public int Level { get; set; }
+
+        //TODO: Not yet implemented in the API, but will be used in the future to determine if a background check is custom or not.
+        [JsonProperty( "is_custom" )]
+        public bool IsCustom { get; set; }
+
         /// <summary>
         /// Gets or sets the name.
         /// </summary>

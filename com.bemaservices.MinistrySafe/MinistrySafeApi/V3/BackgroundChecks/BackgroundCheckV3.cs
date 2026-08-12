@@ -14,6 +14,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3.BackgroundChecks
         [JsonProperty( "id" )]
         public int Id { get; set; }
 
+        //TODO: Not implemented in the API yet, but will be in the future.
+        [JsonProperty( "user_id" )]
+        public int UserId { get; set; }
+
+        // TODO: Not implemented in the API yet, but will be in the future.
+        [JsonProperty( "complete_date" )]
+        public DateTime? CompleteDate { get; set; }
+
         /// <summary>
         /// Gets or sets the order date
         /// </summary>
@@ -38,6 +46,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3.BackgroundChecks
         [JsonProperty( "applicant_interface_url" )]
         public string ApplicantInterfaceUrl { get; set; }
 
+        // TODO: Not implemented in the API yet, but will be in the future.
         /// <summary>
         /// Gets or sets the results URL
         /// </summary>
@@ -49,5 +58,9 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3.BackgroundChecks
         /// </summary>
         [JsonProperty( "payment_status" )]
         public string PaymentStatus { get; set; }
+
+        // TODO: Not implemented in the API yet, but will be in the future.
+        [JsonProperty( "tazwork_flagged" )]
+        public bool TazworkFlagged { get; set; }
     }
 }
