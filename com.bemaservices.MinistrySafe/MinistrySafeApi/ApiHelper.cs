@@ -27,6 +27,7 @@ using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.BackgroundChecks;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Response;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Trainings;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Users;
+using com.bemaservices.MinistrySafe.Utility;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
@@ -56,11 +57,11 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             string serverUrl = null;
             using ( RockContext rockContext = new RockContext() )
             {
-                var settings = MinistrySafe.GetSettings( rockContext );
+                var settings = SharedHelper.GetSettings( rockContext );
                 if ( settings != null )
                 {
-                    apiKey = MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
-                    serverUrl = MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
+                    apiKey = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
+                    serverUrl = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
                 }
             }
 
@@ -179,6 +180,114 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         #region V3 Methods
 
         #region Shared Methods
+
+        private const string InvalidAccessTokenMessage = "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token.";
+
+        /// <summary>
+        /// Validates an HTTP response for unauthorized and expected status code conditions.
+        /// </summary>
+        private static bool HasExpectedStatus(
+            IRestResponse restResponse,
+            HttpStatusCode expectedStatusCode,
+            string failureMessagePrefix,
+            List<string> errorMessages )
+        {
+            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            {
+                errorMessages.Add( InvalidAccessTokenMessage );
+                return false;
+            }
+
+            if ( restResponse.StatusCode != expectedStatusCode )
+            {
+                errorMessages.Add( failureMessagePrefix + restResponse.Content );
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checks for unauthorized status only.
+        /// </summary>
+        private static bool IsNotUnauthorized( IRestResponse restResponse, List<string> errorMessages, string unauthorizedMessage )
+        {
+            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            {
+                errorMessages.Add( unauthorizedMessage );
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Attempts to deserialize the response content into the specified model.
+        /// If deserialization fails, attempts to parse known MinistrySafe error/message payloads.
+        /// </summary>
+        private static bool TryDeserializeResponse<T>( IRestResponse restResponse, string invalidResponseMessage, out T result, List<string> errorMessages )
+            where T : class
+        {
+            result = DeserializeObjectOrNull<T>( restResponse.Content );
+            if ( result != null )
+            {
+                return true;
+            }
+
+            AppendDeserializationErrorMessage( restResponse.Content, invalidResponseMessage, errorMessages );
+            return false;
+        }
+
+        /// <summary>
+        /// Appends the best error message available from known MinistrySafe response payload shapes.
+        /// </summary>
+        private static void AppendDeserializationErrorMessage( string responseContent, string fallbackMessage, List<string> errorMessages )
+        {
+            var errorResponse = DeserializeObjectOrNull<ErrorResponseV3>( responseContent );
+            if ( errorResponse?.Error.IsNotNullOrWhiteSpace() == true )
+            {
+                if ( errorResponse.Message.IsNotNullOrWhiteSpace() )
+                {
+                    errorMessages.Add( string.Format( "{0}: {1}", errorResponse.Error, errorResponse.Message ) );
+                }
+                else
+                {
+                    errorMessages.Add( errorResponse.Error );
+                }
+
+                return;
+            }
+
+            var messageResponse = DeserializeObjectOrNull<MessageResponseV3>( responseContent );
+            if ( messageResponse?.Message.IsNotNullOrWhiteSpace() == true )
+            {
+                errorMessages.Add( messageResponse.Message );
+                return;
+            }
+
+            errorMessages.Add( fallbackMessage + responseContent );
+        }
+
+        /// <summary>
+        /// Safely deserializes an object and returns null on failure.
+        /// </summary>
+        private static T DeserializeObjectOrNull<T>( string content )
+            where T : class
+        {
+            if ( content.IsNullOrWhiteSpace() )
+            {
+                return null;
+            }
+
+            try
+            {
+                return JsonConvert.DeserializeObject<T>( content );
+            }
+            catch
+            {
+                return null;
+            }
+        }
         #endregion
 
         #region Background Check Methods
@@ -196,30 +305,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_PACKAGES_URL );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Packages: ", errorMessages ) )
             {
-                errorMessages.Add( "Failed to authorize MinistrySafe. Please confirm your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            AvailableLevelsV3 levelList;
+            if ( !TryDeserializeResponse( restResponse, "Get Packages is not valid: ", out levelList, errorMessages ) )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Packages: " + restResponse.Content );
-                return false;
-            }
-
-            AvailableLevelsV3 levelList = JsonConvert.DeserializeObject<AvailableLevelsV3>( restResponse.Content );
-            if ( levelList == null )
-            {
-                var errorResponse = JsonConvert.DeserializeObject<ErrorResponseV3>( restResponse.Content );
-                if ( errorResponse != null )
-                {
-                    errorMessages.Add( errorResponse.Error + ": " + errorResponse.Message );
-                }
-                else
-                {
-                    errorMessages.Add( "Get Packages is not valid: " + restResponse.Content );
-                }
                 return false;
             }
 
@@ -242,22 +335,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}", MinistrySafeConstants.MINISTRYSAFE_BACKGROUNDCHECK_URL, backgroundCheckId ) );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Background Check: ", errorMessages ) )
             {
-                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            if ( !TryDeserializeResponse( restResponse, "Get Background Check is not valid: ", out getBackgroundCheckV3, errorMessages ) )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Background Check: " + restResponse.Content );
-                return false;
-            }
-
-            getBackgroundCheckV3 = JsonConvert.DeserializeObject<BackgroundCheckV3>( restResponse.Content );
-            if ( getBackgroundCheckV3 == null )
-            {
-                errorMessages.Add( "Get Background Check is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -278,22 +362,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}/archive", MinistrySafeConstants.MINISTRYSAFE_BACKGROUNDCHECK_URL, backgroundCheckId ), Method.PUT );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to archive MinistrySafe Background Check: ", errorMessages ) )
             {
-                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            if ( !TryDeserializeResponse( restResponse, "Archive Background Check is not valid: ", out archiveBackgroundCheckV3, errorMessages ) )
             {
-                errorMessages.Add( "Failed to archive MinistrySafe Background Check: " + restResponse.Content );
-                return false;
-            }
-
-            archiveBackgroundCheckV3 = JsonConvert.DeserializeObject<BackgroundCheckV3>( restResponse.Content );
-            if ( archiveBackgroundCheckV3 == null )
-            {
-                errorMessages.Add( "Archive Background Check is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -332,22 +407,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Background Checks: ", errorMessages ) )
             {
-                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            PaginatedResponseV3<BackgroundCheckV3> paginatedResponse;
+            if ( !TryDeserializeResponse( restResponse, "Get All Background Checks Response is not valid: ", out paginatedResponse, errorMessages ) )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Background Checks: " + restResponse.Content );
-                return false;
-            }
-
-            var paginatedResponse = JsonConvert.DeserializeObject<PaginatedResponseV3<BackgroundCheckV3>>( restResponse.Content );
-            if ( paginatedResponse == null )
-            {
-                errorMessages.Add( "Get All Background Checks Response is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -412,9 +479,8 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !IsNotUnauthorized( restResponse, errorMessages, InvalidAccessTokenMessage ) )
             {
-                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
@@ -424,10 +490,10 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 stringBuilder.Append( "Failed to create MinistrySafe Background Check for request." );
                 using ( var rockContext = new RockContext() )
                 {
-                    var settings = MinistrySafe.GetSettings( rockContext );
+                    var settings = SharedHelper.GetSettings( rockContext );
                     if ( settings != null )
                     {
-                        var enableDebugging = MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, false ).AsBoolean();
+                        var enableDebugging = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, false ).AsBoolean();
                         if ( enableDebugging )
                         {
                             stringBuilder.AppendFormat( " Request:{0}"
@@ -446,10 +512,8 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            backgroundCheckResponse = JsonConvert.DeserializeObject<BackgroundCheckV3>( restResponse.Content );
-            if ( backgroundCheckResponse == null )
+            if ( !TryDeserializeResponse( restResponse, "Create Background Check is not valid: ", out backgroundCheckResponse, errorMessages ) )
             {
-                errorMessages.Add( "Create Background Check is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -475,22 +539,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_TRAININGS_URL );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Training Types: ", errorMessages ) )
             {
-                errorMessages.Add( "Failed to authorize MinistrySafe. Please confirm your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            PaginatedResponseV3<TrainingTypeV3> paginatedResponse;
+            if ( !TryDeserializeResponse( restResponse, "Get All Background Checks Response is not valid: ", out paginatedResponse, errorMessages ) )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Training Types: " + restResponse.Content );
-                return false;
-            }
-
-            var paginatedResponse = JsonConvert.DeserializeObject<PaginatedResponseV3<TrainingTypeV3>>( restResponse.Content );
-            if ( paginatedResponse == null )
-            {
-                errorMessages.Add( "Get All Background Checks Response is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -519,9 +575,11 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         internal static bool AssignTraining(
             int userId,
-            string trainingId,
+            int trainingId,
+            out TrainingAttemptV3 trainingAttemptV3,
             List<string> errorMessages )
         {
+            trainingAttemptV3 = null;
             RestClient restClient = RestClient();
             RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}/assign", MinistrySafeConstants.MINISTRYSAFE_TRAININGS_URL, trainingId ), Method.POST );
 
@@ -534,22 +592,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.Created, "Failed to assign MinistrySafe Training: ", errorMessages ) )
             {
-                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.Created )
+            if ( !TryDeserializeResponse( restResponse, "Assign Training Response is not valid: ", out trainingAttemptV3, errorMessages ) )
             {
-                errorMessages.Add( "Failed to assign MinistrySafe Training: " + restResponse.Content );
-                return false;
-            }
-
-            var assignTrainingResponse = JsonConvert.DeserializeObject<MessageResponseV3>( restResponse.Content );
-            if ( assignTrainingResponse == null )
-            {
-                errorMessages.Add( "Assign Training Response is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -601,22 +650,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Trainings: ", errorMessages ) )
             {
-                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            PaginatedResponseV3<TrainingAttemptV3> paginatedResponse;
+            if ( !TryDeserializeResponse( restResponse, "Get All Trainings Response is not valid: ", out paginatedResponse, errorMessages ) )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Trainings: " + restResponse.Content );
-                return false;
-            }
-
-            var paginatedResponse = JsonConvert.DeserializeObject<PaginatedResponseV3<TrainingAttemptV3>>( restResponse.Content );
-            if ( paginatedResponse == null )
-            {
-                errorMessages.Add( "Get All Trainings Response is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -660,22 +701,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.Created, "Failed to Resend MinistrySafe Training: ", errorMessages ) )
             {
-                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.Created )
+            TrainingAssignmentV3 resendTrainingResponse;
+            if ( !TryDeserializeResponse( restResponse, "Resend Training Response is not valid: ", out resendTrainingResponse, errorMessages ) )
             {
-                errorMessages.Add( "Failed to Resend MinistrySafe Training: " + restResponse.Content );
-                return false;
-            }
-
-            var resendTrainingResponse = JsonConvert.DeserializeObject<MessageResponseV3>( restResponse.Content );
-            if ( resendTrainingResponse == null )
-            {
-                errorMessages.Add( "Resend Training Response is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -699,22 +732,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}", MinistrySafeConstants.MINISTRYSAFE_TRAINING_ATTEMPTS_URL, trainingAttemptId ) );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Training: ", errorMessages ) )
             {
-                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            if ( !TryDeserializeResponse( restResponse, "Get Training is not valid: ", out trainingAttempt, errorMessages ) )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Training: " + restResponse.Content );
-                return false;
-            }
-
-            trainingAttempt = JsonConvert.DeserializeObject<TrainingAttemptV3>( restResponse.Content );
-            if ( trainingAttempt == null )
-            {
-                errorMessages.Add( "Get Training is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -732,7 +756,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <param name="getUserResponse">The get user response.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        internal static bool GetUser( string userId,
+        internal static bool GetUser( int userId,
             out UserV3 user,
             List<string> errorMessages )
         {
@@ -741,22 +765,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}?include=trainings,background_checks", MinistrySafeConstants.MINISTRYSAFE_USERS_URL, userId ) );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe User: ", errorMessages ) )
             {
-                errorMessages.Add( "Failed to authorize MinistrySafe. Please confirm your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            if ( !TryDeserializeResponse( restResponse, "Get User is not valid: ", out user, errorMessages ) )
             {
-                errorMessages.Add( "Failed to get MinistrySafe User: " + restResponse.Content );
-                return false;
-            }
-
-            user = JsonConvert.DeserializeObject<UserV3>( restResponse.Content );
-            if ( user == null )
-            {
-                errorMessages.Add( "Get User is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -787,22 +802,14 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Users: ", errorMessages ) )
             {
-                errorMessages.Add( "Failed to authorize MinistrySafe. Please confirm your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            PaginatedResponseV3<UserV3> paginatedResponse;
+            if ( !TryDeserializeResponse( restResponse, "Get All Trainings Response is not valid: ", out paginatedResponse, errorMessages ) )
             {
-                errorMessages.Add( "Failed to get MinistrySafe Users: " + restResponse.Content );
-                return false;
-            }
-
-            var paginatedResponse = JsonConvert.DeserializeObject<PaginatedResponseV3<UserV3>>( restResponse.Content );
-            if ( paginatedResponse == null )
-            {
-                errorMessages.Add( "Get All Trainings Response is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -893,22 +900,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.Created, "Failed to create MinistrySafe User: ", errorMessages ) )
             {
-                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.Created )
+            if ( !TryDeserializeResponse( restResponse, "Create User Response is not valid: ", out createUserResponse, errorMessages ) )
             {
-                errorMessages.Add( "Failed to create MinistrySafe User: " + restResponse.Content );
-                return false;
-            }
-
-            createUserResponse = JsonConvert.DeserializeObject<UserV3>( restResponse.Content );
-            if ( createUserResponse == null )
-            {
-                errorMessages.Add( "Create User Response is not valid: " + restResponse.Content );
                 return false;
             }
 
@@ -1010,22 +1008,13 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( restResponse.StatusCode == HttpStatusCode.Unauthorized )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to update MinistrySafe User: ", errorMessages ) )
             {
-                errorMessages.Add( "Invalid MinistrySafe access token. To Re-authenticate go to Admin Tools > System Settings > MinistrySafe. Click edit to change your access token." );
                 return false;
             }
 
-            if ( restResponse.StatusCode != HttpStatusCode.OK )
+            if ( !TryDeserializeResponse( restResponse, "Update User Response is not valid: ", out userResponse, errorMessages ) )
             {
-                errorMessages.Add( "Failed to update MinistrySafe User: " + restResponse.Content );
-                return false;
-            }
-
-            userResponse = JsonConvert.DeserializeObject<UserV3>( restResponse.Content );
-            if ( userResponse == null )
-            {
-                errorMessages.Add( "Update User Response is not valid: " + restResponse.Content );
                 return false;
             }
 

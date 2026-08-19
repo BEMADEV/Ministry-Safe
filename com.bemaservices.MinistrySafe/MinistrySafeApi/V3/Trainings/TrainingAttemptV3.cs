@@ -56,6 +56,10 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Trainings
         [JsonProperty( "payment_status" )]
         public string PaymentStatus { get; set; }
 
+        //TODO: Not currently implemented in the API, but may be in the future.
+        [JsonProperty( "direct_login_url" )]
+        public string DirectLoginUrl { get; set; }
+
         /// <summary>
         /// Gets or sets the training link expiration date
         /// </summary>
@@ -66,7 +70,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Trainings
         /// Gets or sets the package ID
         /// </summary>
         [JsonProperty( "participant" )]
-        public TrainingAttemptParticipantV3 User { get; set; }
+        public TrainingAttemptParticipantV3 Participant { get; set; }
 
         /// <summary>
         /// Gets or sets the user's first name
@@ -84,16 +88,22 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Trainings
         public int Id { get; set; }
 
         /// <summary>
-        /// Gets or sets the user ID
+        /// Gets or sets the participant's first name
         /// </summary>
         [JsonProperty( "first_name" )]
         public string FirstName { get; set; }
 
         /// <summary>
-        /// Gets or sets the training code
+        /// Gets or sets the participant's last name
         /// </summary>
         [JsonProperty( "last_name" )]
         public string LastName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the participant's last name
+        /// </summary>
+        [JsonProperty( "external_id" )]
+        public string ExternalId { get; set; }
 
     }
 

@@ -28,6 +28,7 @@ using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
+using com.bemaservices.MinistrySafe.Utility;
 
 namespace com.bemaservices.MinistrySafe.Jobs
 {
@@ -72,8 +73,7 @@ namespace com.bemaservices.MinistrySafe.Jobs
 
             bool relaunchCompletedWorkflows = GetAttributeValue( "RelaunchCompletedWorkflows" ).AsBoolean();
 
-            var ministrySafe = new MinistrySafe();
-            ministrySafe.ImportTrainings( dateRange, workflowType, relaunchCompletedWorkflows, out trainingsProcessed, out errorMessages );
+            TrainingHelper.ImportTrainings( dateRange, workflowType, relaunchCompletedWorkflows, out trainingsProcessed, out errorMessages );
 
             this.Result += string.Format( "{0} trainings processed{1}", trainingsProcessed, ( errorMessages.Count > 0 ) ? ", but " + errorMessages.Count + " errors were reported:<br/><ul>" + errorMessages.Select(em=> "<li>"+em+"</li>").ToList().AsDelimited("")+"</ul>" : string.Empty );
         }

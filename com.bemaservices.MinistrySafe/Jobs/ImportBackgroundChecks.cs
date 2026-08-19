@@ -28,6 +28,7 @@ using Rock.Data;
 using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Web.UI.Controls;
+using com.bemaservices.MinistrySafe.Utility;
 
 namespace com.bemaservices.MinistrySafe.Jobs
 {
@@ -72,8 +73,7 @@ namespace com.bemaservices.MinistrySafe.Jobs
 
             bool relaunchCompletedWorkflows = GetAttributeValue( "RelaunchCompletedWorkflows" ).AsBoolean();
 
-            var ministrySafe = new MinistrySafe();
-            ministrySafe.ImportBackgroundChecks( dateRange, workflowType, relaunchCompletedWorkflows, out backgroundChecksProcessed, out errorMessages );
+            BackgroundCheckHelper.ImportBackgroundChecks( dateRange, workflowType, relaunchCompletedWorkflows, out backgroundChecksProcessed, out errorMessages );
 
             this.Result += string.Format( "{0} background checks processed{1}", backgroundChecksProcessed, ( errorMessages.Count > 0 ) ? ", but " + errorMessages.Count + " errors were reported" : string.Empty );
         }

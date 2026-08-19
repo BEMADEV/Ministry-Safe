@@ -45,7 +45,7 @@ using Rock.Web.Cache;
 
 namespace com.bemaservices.MinistrySafe.Utility
 {
-    internal class SharedHelper
+    public static class SharedHelper
     {
         /// <summary>
         /// Saves the webhook results.
@@ -75,7 +75,7 @@ namespace com.bemaservices.MinistrySafe.Utility
                 );
 
             // Try casting as Training
-            TrainingAssignmentV3_Webhook trainingWebhook = JsonConvert.DeserializeObject<TrainingAssignmentV3_Webhook>( postedData, new JsonSerializerSettings()
+            TrainingAttemptV3 trainingWebhook = JsonConvert.DeserializeObject<TrainingAttemptV3>( postedData, new JsonSerializerSettings()
             {
                 Error = ( sender, errorEventArgs ) =>
                 {

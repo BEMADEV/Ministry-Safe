@@ -4,6 +4,7 @@ using Microsoft.Owin;
 using Rock.Model;
 using System.Net;
 using System.IO;
+using com.bemaservices.MinistrySafe.Utility;
 
 namespace com.bemaservices.MinistrySafe.Webhooks
 {
@@ -43,7 +44,7 @@ namespace com.bemaservices.MinistrySafe.Webhooks
                 }
 
                 string responseMessage;
-                if ( !MinistrySafe.SaveWebhookResults( postedData, out responseMessage ) )
+                if ( !SharedHelper.SaveWebhookResults( postedData, out responseMessage ) )
                 {
                     context.Response.StatusCode = ( int ) HttpStatusCode.OK; // If not OK, the website will redirect to the error screen
                     await context.Response.WriteAsync( responseMessage );

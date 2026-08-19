@@ -45,7 +45,7 @@ using Rock.Web.Cache;
 
 namespace com.bemaservices.MinistrySafe.Utility
 {
-    internal class TrainingHelper
+    public class TrainingHelper
     {
         #region Private Fields
 
@@ -263,8 +263,8 @@ namespace com.bemaservices.MinistrySafe.Utility
                         return true;
                     }
 
-                    string surveyTypeCode;
-                    if ( !GetSurveyTypeCode( rockContext, workflow, surveyTypeAttribute, out surveyTypeCode, errorMessages ) )
+                    int? trainingId;
+                    if ( !GetTrainingId( rockContext, workflow, surveyTypeAttribute, out trainingId, errorMessages ) )
                     {
                         errorMessages.Add( "Unable to get Survey Type." );
                         UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
@@ -287,11 +287,11 @@ namespace com.bemaservices.MinistrySafe.Utility
 
                     int? userId;
                     if ( !UserHelper.GetOrCreateUser(
-                        person, 
-                        personAliasId.Value, 
-                        userTypeName, 
-                        tagList, 
-                        out userId, 
+                        person,
+                        personAliasId.Value,
+                        userTypeName,
+                        tagList,
+                        out userId,
                         errorMessages ) )
                     {
                         errorMessages.Add( "Unable to create user." );
@@ -300,7 +300,7 @@ namespace com.bemaservices.MinistrySafe.Utility
                     }
 
                     string directLoginUrl;
-                    if ( !AssignTraining( userId, surveyTypeCode, out directLoginUrl, errorMessages ) )
+                    if ( !AssignTraining( userId.Value, trainingId.Value, out directLoginUrl, errorMessages ) )
                     {
                         errorMessages.Add( "Unable to assign training." );
                         UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
@@ -325,7 +325,7 @@ namespace com.bemaservices.MinistrySafe.Utility
 
                         ministrySafeUser.PersonAliasId = personAliasId.Value;
                         ministrySafeUser.ForeignId = 4;
-                        ministrySafeUser.SurveyCode = surveyTypeCode;
+                        ministrySafeUser.SurveyCode = trainingId.Value.ToString();
                         ministrySafeUser.UserType = userTypeName;
                         ministrySafeUser.RequestDate = RockDateTime.Now;
                         ministrySafeUser.DirectLoginUrl = directLoginUrl;
@@ -365,7 +365,7 @@ namespace com.bemaservices.MinistrySafe.Utility
         }
 
         public bool RefreshTraining( RockContext rockContext, Rock.Model.Workflow workflow,
-                 AttributeCache personAttribute, AttributeCache directLoginUrlAttribute,
+                 AttributeCache personAttribute, AttributeCache directLoginUrlAttribute, AttributeCache surveyTypeAttribute,
                  out List<string> errorMessages )
         {
             errorMessages = new List<string>();
@@ -393,16 +393,25 @@ namespace com.bemaservices.MinistrySafe.Utility
                         return true;
                     }
 
-                    UserResponse userResponse;
-                    if ( !MinistrySafeApiUtility.GetUser( workflow, person, personAliasId.Value, out userResponse, errorMessages ) )
+                    UserV3 userResponse;
+                    var externalId = "pa" + personAliasId.ToString();
+                    if ( !ApiHelper.GetUserByExternalId( externalId, out userResponse, errorMessages ) )
                     {
                         errorMessages.Add( "Unable to get User." );
                         UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
                         return true;
                     }
 
+                    int? trainingId;
+                    if ( !GetTrainingId( rockContext, workflow, surveyTypeAttribute, out trainingId, errorMessages ) )
+                    {
+                        errorMessages.Add( "Unable to get Survey Type." );
+                        UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
+                        return true;
+                    }
+
                     string trainingLink;
-                    if ( !RefreshTraining( userResponse.Id, out trainingLink, errorMessages ) )
+                    if ( !ResendTraining( userResponse.Id.Value, trainingId.Value, out trainingLink, errorMessages ) )
                     {
                         errorMessages.Add( "Unable to refresh training link." );
                         UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
@@ -618,14 +627,13 @@ namespace com.bemaservices.MinistrySafe.Utility
         /// <param name="trainingsProcessed">The trainings processed.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal bool ImportTrainings( DateRange dateRange, WorkflowTypeCache workflowType, bool relaunchCompletedWorkflows, out int trainingsProcessed, out List<string> errorMessages )
+        internal static bool ImportTrainings( DateRange dateRange, WorkflowTypeCache workflowType, bool relaunchCompletedWorkflows, out int trainingsProcessed, out List<string> errorMessages )
         {
             var startDate = dateRange.Start;
             var endDate = dateRange.End;
             trainingsProcessed = 0;
-            int pageNumber = 1;
             errorMessages = new List<string>();
-            List<TrainingAttemptV3> getAllTrainingResponses;
+            List<TrainingAttemptV3> trainingAttemptList;
 
             // Save Interaction storing information
             var errorMessage = string.Empty;
@@ -636,45 +644,35 @@ namespace com.bemaservices.MinistrySafe.Utility
                 return false;
             }
 
-            if ( MinistrySafeApiUtility.GetAllTrainings( pageNumber, startDate, endDate, out getAllTrainingResponses, errorMessages ) )
+            if ( ApiHelper.GetAllTrainings( 1, startDate, endDate, null, null, out trainingAttemptList, errorMessages ) )
             {
                 SharedHelper.LogMessageToDebuggingInteraction(
                     interactionId,
                     String.Format(
-                        "Pulled Page {0} of trainings from {1} to {2}",
-                        pageNumber,
-                        startDate,
-                        endDate
-                        )
-                    );
-
-                SharedHelper.LogMessageToDebuggingInteraction(
-                    interactionId,
-                    String.Format(
                         "Received Api Data </br> {0}</br></br>",
-                        getAllTrainingResponses.ToJson()
+                        trainingAttemptList.ToJson()
                         )
                     );
 
-                while ( getAllTrainingResponses.Any() )
+                while ( trainingAttemptList.Any() )
                 {
                     // Loop through trainings
-                    foreach ( var getAllTrainingResponse in getAllTrainingResponses )
+                    foreach ( var trainingAttempt in trainingAttemptList )
                     {
                         SharedHelper.LogMessageToDebuggingInteraction(
                             interactionId,
                             String.Format(
                                 "Processing Training for id:{0}",
-                                getAllTrainingResponse.Id
+                                trainingAttempt.Id
                                 )
                             );
 
-                        var externalId = getAllTrainingResponse.Participant.PersonAliasId ?? getAllTrainingResponse.Participant.EmployeeId;
-                        var userId = getAllTrainingResponse.Participant.Id;
-                        var score = getAllTrainingResponse.Score;
-                        var completedDateTime = getAllTrainingResponse.CompleteDateTime;
-                        var surveyCode = getAllTrainingResponse.SurveyCode;
-                        var createdDateTime = getAllTrainingResponse.CreatedDateTime;
+                        var externalId = trainingAttempt.Participant.ExternalId;
+                        var userId = trainingAttempt.Participant.Id;
+                        var score = trainingAttempt.Score;
+                        var completedDateTime = trainingAttempt.CompletionDate;
+                        var surveyCode = trainingAttempt.TrainingType.ShortName;
+                        var createdDateTime = trainingAttempt.CreationDate;
                         if ( completedDateTime.HasValue )
                         {
                             if ( UpdateTraining( externalId, userId, score, surveyCode, completedDateTime.Value, createdDateTime, workflowType, relaunchCompletedWorkflows, interactionId ) )
@@ -683,18 +681,10 @@ namespace com.bemaservices.MinistrySafe.Utility
                             }
                             else
                             {
-                                errorMessages.Add( String.Format( "Error updating training for id:{0}", getAllTrainingResponse.Id ) );
+                                errorMessages.Add( String.Format( "Error updating training for id:{0}", trainingAttempt.Id ) );
                             }
                         }
                     }
-
-                    // Get New Trainings
-                    pageNumber++;
-                    if ( !MinistrySafeApiUtility.GetAllTrainings( pageNumber, startDate, endDate, out getAllTrainingResponses, errorMessages ) )
-                    {
-                        return false;
-                    }
-
                 }
 
                 return true;
@@ -708,15 +698,15 @@ namespace com.bemaservices.MinistrySafe.Utility
         /// </summary>
         /// <param name="trainingWebhook">The training webhook.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        internal static bool UpdateTrainingFromWebhook( TrainingAssignmentV3_Webhook trainingWebhook )
+        internal static bool UpdateTrainingFromWebhook( TrainingAttemptV3 trainingWebhook )
         {
-            var externalId = trainingWebhook.ExternalId;
-            var userId = trainingWebhook.UserId;
+            var externalId = trainingWebhook.Participant.ExternalId;
+            var userId = trainingWebhook.Participant.Id;
             var score = trainingWebhook.Score;
-            var completedDateTime = trainingWebhook.CompleteDateTime;
-            var surveyCode = trainingWebhook.SurveyCode;
+            var completedDateTime = trainingWebhook.CompletionDate;
+            var surveyCode = trainingWebhook.TrainingType.ShortName;
 
-            return UpdateTraining( externalId, userId, score, surveyCode, completedDateTime, null, null );
+            return UpdateTraining( externalId, userId, score, surveyCode, completedDateTime.Value, null, null );
         }
 
         /// <summary>
@@ -732,7 +722,7 @@ namespace com.bemaservices.MinistrySafe.Utility
         /// <param name="relaunchCompletedWorkflows">if set to <c>true</c>, launch a new workflow if the existing workflow has already completed.</param>
         /// <param name="interactionId">The interaction identifier.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal static bool UpdateTraining( string externalId, string userId, int? score, string surveyCode, DateTime completedDateTime, DateTime? createdDateTime, WorkflowTypeCache workflowTypeCache = null, bool relaunchCompletedWorkflows = false, int? interactionId = null )
+        internal static bool UpdateTraining( string externalId, int userId, int? score, string surveyCode, DateTime completedDateTime, DateTime? createdDateTime, WorkflowTypeCache workflowTypeCache = null, bool relaunchCompletedWorkflows = false, int? interactionId = null )
         {
             var rockContext = new RockContext();
             var errorMessages = new List<string>();
@@ -857,7 +847,7 @@ namespace com.bemaservices.MinistrySafe.Utility
                 ministrySafeUser.ForeignId = 4;
                 ministrySafeUser.SurveyCode = surveyCode;
                 ministrySafeUser.RequestDate = createdDateTime ?? RockDateTime.Now;
-                ministrySafeUser.UserId = userId.AsInteger();
+                ministrySafeUser.UserId = userId;
                 rockContext.SaveChanges();
                 ministrySafeUser = ministrySafeUserService.Get( ministrySafeUser.Guid );
                 ministrySafeUsers.Add( ministrySafeUser );
@@ -943,9 +933,9 @@ namespace com.bemaservices.MinistrySafe.Utility
         /// <param name="packageName">Name of the package.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        internal bool GetSurveyTypeCode( RockContext rockContext, Rock.Model.Workflow workflow, AttributeCache surveyTypeAttribute, out string surveyCode, List<string> errorMessages )
+        internal bool GetTrainingId( RockContext rockContext, Rock.Model.Workflow workflow, AttributeCache surveyTypeAttribute, out int? trainingId, List<string> errorMessages )
         {
-            surveyCode = null;
+            trainingId = null;
             if ( surveyTypeAttribute == null )
             {
                 errorMessages.Add( "The 'MinistrySafe' provider requires a survey type." );
@@ -960,19 +950,7 @@ namespace com.bemaservices.MinistrySafe.Utility
                 return false;
             }
 
-            if ( surveyTypeDefinedValue.Attributes == null )
-            {
-                // shouldn't happen since pkgTypeDefinedValue is a ModelCache<,> type 
-                return false;
-            }
-
-            surveyTypeDefinedValue.LoadAttributes();
-            surveyCode = surveyTypeDefinedValue.GetAttributeValue( "Code" );
-
-            if ( surveyCode.IsNullOrWhiteSpace() )
-            {
-                surveyCode = surveyTypeDefinedValue.Value;
-            }
+            trainingId = surveyTypeDefinedValue.ForeignId;
 
             return true;
         }
@@ -987,10 +965,10 @@ namespace com.bemaservices.MinistrySafe.Utility
         public static bool AssignTraining( int userId, int trainingId, out string directLoginUrl, List<string> errorMessages )
         {
             directLoginUrl = null;
-            TrainingAttemptV3 assignTrainingResponse;
-            if ( ApiHelper.AssignTraining( userId, trainingId, out assignTrainingResponse, errorMessages ) )
+            TrainingAttemptV3 trainingAttemptV3;
+            if ( ApiHelper.AssignTraining( userId, trainingId, out trainingAttemptV3, errorMessages ) )
             {
-                directLoginUrl = assignTrainingResponse.DirectLoginUrl;
+                directLoginUrl = trainingAttemptV3.DirectLoginUrl;
                 return true;
             }
 
@@ -1004,13 +982,14 @@ namespace com.bemaservices.MinistrySafe.Utility
         /// <param name="surveyCode">The survey code.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
-        public static bool RefreshTraining( string candidateId, out string trainingLink, List<string> errorMessages )
+        public static bool ResendTraining( int userId, int trainingId, out string trainingLink, List<string> errorMessages )
         {
+
             trainingLink = null;
-            RefreshTrainingResponse refreshTrainingResponse;
-            if ( MinistrySafeApiUtility.RefreshTraining( candidateId, out refreshTrainingResponse, errorMessages ) )
+            TrainingAttemptV3 trainingAttemptV3;
+            if ( ApiHelper.AssignTraining( userId, trainingId, out trainingAttemptV3, errorMessages ) )
             {
-                trainingLink = refreshTrainingResponse.TrainingLink;
+                trainingLink = trainingAttemptV3.DirectLoginUrl;
                 return true;
             }
 

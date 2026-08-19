@@ -13,8 +13,8 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3
         /// Gets or sets the candidate ID.
         /// </summary>
         /// <value>The candidate ID.</value>
-        [JsonProperty( "id" )]
-        public string Id { get; set; }
+        //[JsonProperty( "id" )]
+        //public string Id { get; set; }
 
         /// <summary>
         /// Gets or sets the name.
@@ -31,7 +31,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi.V3
         public decimal Price { get; set; }
 
         [JsonProperty( "level" )]
-        public int Level { get; set; }
+        public string Level { get; set; }
 
         //TODO: Not yet implemented in the API, but will be used in the future to determine if a background check is custom or not.
         [JsonProperty( "is_custom" )]

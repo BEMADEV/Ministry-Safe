@@ -27,6 +27,7 @@ using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Security;
 using com.bemaservices.MinistrySafe;
+using com.bemaservices.MinistrySafe.Utility;
 namespace com.bemaservices.MinistrySafe.Workflow.Action
 {
     /// <summary>
@@ -53,11 +54,9 @@ namespace com.bemaservices.MinistrySafe.Workflow.Action
         {
             errorMessages = new List<string>();
 
-            var provider = new MinistrySafe();
             var personAttribute = AttributeCache.Get( GetAttributeValue( action, "PersonAttribute" ).AsGuid() );
-
-            var ministrySafe = new MinistrySafe();
-            return ministrySafe.GetUserTags( rockContext, action.Activity.Workflow, personAttribute, out errorMessages );
+            
+            return UserHelper.GetUserTags( rockContext, action.Activity.Workflow, personAttribute, out errorMessages );
         }
     }
 }

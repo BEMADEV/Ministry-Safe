@@ -22,6 +22,7 @@ using System.Web.UI;
 
 using Rock;
 using com.bemaservices.MinistrySafe;
+using com.bemaservices.MinistrySafe.Utility;
 using com.bemaservices.MinistrySafe.Constants;
 using Rock.Data;
 using Rock.Migrations;
@@ -91,10 +92,10 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         {
             using ( var rockContext = new RockContext() )
             {
-                var settings = com.bemaservices.MinistrySafe.MinistrySafe.GetSettings( rockContext );
-                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, tbAccessToken.Text, true );
-                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, tbServerUrl.Text, false );
-                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, cbEnableDebugging.Checked.ToString(), false );
+                var settings = SharedHelper.GetSettings( rockContext );
+                SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, tbAccessToken.Text, true );
+                SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, tbServerUrl.Text, false );
+                SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, cbEnableDebugging.Checked.ToString(), false );
 
                 rockContext.SaveChanges();
 
@@ -126,7 +127,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
             nbNotification.Visible = false;
 
             List<string> errorMessages = new List<string>();
-            if ( !com.bemaservices.MinistrySafe.MinistrySafe.UpdatePackages( errorMessages ) )
+            if ( !BackgroundCheckHelper.UpdateAvailableLevels( errorMessages ) )
             {
                 nbNotification.Text = "<p>" + errorMessages.AsDelimited( "</p><p>" ) + "</p>";
                 nbNotification.Visible = true;
@@ -149,7 +150,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
             nbNotification.Visible = false;
 
             List<string> errorMessages = new List<string>();
-            if ( !com.bemaservices.MinistrySafe.MinistrySafe.UpdateTags( errorMessages ) )
+            if ( !UserHelper.UpdateTags( errorMessages ) )
             {
                 nbNotification.Text = "<p>" + errorMessages.AsDelimited( "</p><p>" ) + "</p>";
                 nbNotification.Visible = true;
@@ -170,7 +171,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
             nbNotification.Visible = false;
 
             List<string> errorMessages = new List<string>();
-            if ( !com.bemaservices.MinistrySafe.MinistrySafe.UpdateSurveyTypes( errorMessages ) )
+            if ( !TrainingHelper.UpdateTrainingTypes( errorMessages ) )
             {
                 nbNotification.Text = "<p>" + errorMessages.AsDelimited( "</p><p>" ) + "</p>";
                 nbNotification.Visible = true;
@@ -355,22 +356,22 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
             bool enableDebugging = false;
             using ( RockContext rockContext = new RockContext() )
             {
-                var settings = com.bemaservices.MinistrySafe.MinistrySafe.GetSettings( rockContext );
+                var settings = SharedHelper.GetSettings( rockContext );
                 if ( settings != null )
                 {
-                    accessToken = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
-                    serverUrl = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
-                    enableDebugging = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, false ).AsBoolean();
+                    accessToken = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
+                    serverUrl = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
+                    enableDebugging = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, false ).AsBoolean();
 
                     if ( accessToken.IsNullOrWhiteSpace() )
                     {
                         string token = GlobalAttributesCache.Value( "MinistrySafeAPIToken" );
                         if ( token.IsNotNullOrWhiteSpace() )
                         {
-                            com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, token, true );
+                            SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, token, true );
                             rockContext.SaveChanges();
                             BackgroundCheckContainer.Instance.Refresh();
-                            accessToken = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
+                            accessToken = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
                         }
                     }
 

@@ -45,7 +45,7 @@ using Rock.Web.Cache;
 
 namespace com.bemaservices.MinistrySafe.Utility
 {
-    internal class BackgroundCheckHelper
+    public class BackgroundCheckHelper
     {
         #region Private Fields
 
@@ -518,7 +518,7 @@ namespace com.bemaservices.MinistrySafe.Utility
                     int? personAliasId = externalId?.RemoveAllNonNumericCharacters().AsIntegerOrNull();
                     if ( personAliasId == null )
                     {
-                        personAliasId = UserHelper.FindRockPerson( userId.ToString(), rockContext, errorMessages );
+                        personAliasId = UserHelper.FindRockPerson( userId.Value, rockContext, errorMessages );
                     }
 
                     if ( personAliasId == null )
@@ -970,9 +970,6 @@ namespace com.bemaservices.MinistrySafe.Utility
                 availableLevels = new List<BackgroundCheckLevelV3>();
             }
 
-            var defaultPackageResponseList = new List<PackageResponse>();
-            var packageResponseList = new List<PackageResponse>();
-
             Dictionary<string, List<DefinedValue>> groupedPackageKeys;
             using ( var rockContext = new RockContext() )
             {
@@ -988,35 +985,29 @@ namespace com.bemaservices.MinistrySafe.Utility
                     .ToDictionary( v => v.Key, v => v.ToList() );
 
                 var userTypes = definedValueService
-                     .GetByDefinedTypeGuid( "559E79C6-2EAB-4A0D-A16F-59D9B63F002F".AsGuid() )
+                     .GetByDefinedTypeGuid( MinistrySafeSystemGuid.MINISTRYSAFE_USER_TYPES.AsGuid() )
                      .ToList();
 
-                foreach ( var packageResponse in customPackageResponseList )
+                foreach ( var backgroundCheckLevel in availableLevels )
                 {
-                    string packageName = packageResponse.Name;
+                    string packageName = backgroundCheckLevel.Name;
                     if ( !groupedPackageKeys.ContainsKey( packageName ) )
                     {
-                        AddPackage( rockContext, definedType, definedValueService, packageResponse, null );
-                    }
-
-                    packageResponseList.Add( packageResponse );
-                }
-
-                foreach ( var packageResponse in defaultPackageResponseList )
-                {
-                    string packageName = packageResponse.Name;
-                    if ( !groupedPackageKeys.ContainsKey( packageName ) )
-                    {
-                        foreach ( var userType in userTypes )
+                        if(backgroundCheckLevel.IsCustom == true )
                         {
-                            AddPackage( rockContext, definedType, definedValueService, packageResponse, userType );
+                            AddPackage( rockContext, definedType, definedValueService, backgroundCheckLevel, null );
+                        }
+                        else
+                        {
+                            foreach ( var userType in userTypes )
+                            {
+                                AddPackage( rockContext, definedType, definedValueService, backgroundCheckLevel, userType );
+                            }
                         }
                     }
-
-                    packageResponseList.Add( packageResponse );
                 }
 
-                var packageRestResponseNames = packageResponseList.Select( pr => pr.Name );
+                var packageRestResponseNames = availableLevels.Select( pr => pr.Name );
                 foreach ( var groupedPackageKey in groupedPackageKeys )
                 {
                     var isPackageActive = packageRestResponseNames.Contains( groupedPackageKey.Key );
@@ -1041,7 +1032,7 @@ namespace com.bemaservices.MinistrySafe.Utility
         /// <param name="definedValueService">The defined value service.</param>
         /// <param name="packageResponse">The package response.</param>
         /// <param name="userType">Type of the user.</param>
-        internal static void AddPackage( RockContext rockContext, DefinedTypeCache definedType, DefinedValueService definedValueService, PackageResponse packageResponse, DefinedValue userType = null )
+        internal static void AddPackage( RockContext rockContext, DefinedTypeCache definedType, DefinedValueService definedValueService, BackgroundCheckLevelV3 backgroundCheckLevel, DefinedValue userType = null )
         {
             DefinedValue definedValue = null;
 
@@ -1050,7 +1041,7 @@ namespace com.bemaservices.MinistrySafe.Utility
                 IsActive = true,
                 DefinedTypeId = definedType.Id,
                 ForeignId = 4,
-                Value = string.Format( "{0}{1} {2}", MinistrySafeConstants.MINISTRYSAFE_TYPENAME_PREFIX, userType != null ? userType.Description : "", packageResponse.Name.Replace( '_', ' ' ) )
+                Value = string.Format( "{0}{1} {2}", MinistrySafeConstants.MINISTRYSAFE_TYPENAME_PREFIX, userType != null ? userType.Description : "", backgroundCheckLevel.Name.Replace( '_', ' ' ) )
             };
 
             definedValueService.Add( definedValue );
@@ -1059,10 +1050,9 @@ namespace com.bemaservices.MinistrySafe.Utility
 
             definedValue.LoadAttributes( rockContext );
 
-            definedValue.SetAttributeValue( "MinistrySafePackageName", packageResponse.Name );
-            definedValue.SetAttributeValue( "MinistrySafePackageLevel", packageResponse.Level );
-            definedValue.SetAttributeValue( "MinistrySafePackageCode", packageResponse.Code );
-            definedValue.SetAttributeValue( "MinistrySafePackagePrice", packageResponse.Price );
+            definedValue.SetAttributeValue( "MinistrySafePackageName", backgroundCheckLevel.Name );
+            definedValue.SetAttributeValue( "MinistrySafePackageLevel", backgroundCheckLevel.Level );
+            definedValue.SetAttributeValue( "MinistrySafePackagePrice", backgroundCheckLevel.Price );
 
             if ( userType != null )
             {

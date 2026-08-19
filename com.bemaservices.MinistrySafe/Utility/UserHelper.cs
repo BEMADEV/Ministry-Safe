@@ -45,7 +45,7 @@ using Rock.Web.Cache;
 
 namespace com.bemaservices.MinistrySafe.Utility
 {
-    internal class UserHelper
+    public class UserHelper
     {
         #region Private Fields
 
@@ -66,7 +66,7 @@ namespace com.bemaservices.MinistrySafe.Utility
         /// <param name="rockContext">The rock context.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>System.String.</returns>
-        internal static int? FindRockPerson( string userId, RockContext rockContext, List<string> errorMessages )
+        internal static int? FindRockPerson( int userId, RockContext rockContext, List<string> errorMessages )
         {
             var externalId = string.Empty;
             UserV3 user = null;
@@ -141,7 +141,7 @@ namespace com.bemaservices.MinistrySafe.Utility
         /// <param name="rockContext">The rock context.</param>
         /// <param name="errorMessages">The error messages.</param>
         /// <returns>System.String.</returns>
-        internal static string FindUserType( string userId, RockContext rockContext, List<string> errorMessages )
+        internal static string FindUserType( int userId, RockContext rockContext, List<string> errorMessages )
         {
             var userType = string.Empty;
             UserV3 user = null;

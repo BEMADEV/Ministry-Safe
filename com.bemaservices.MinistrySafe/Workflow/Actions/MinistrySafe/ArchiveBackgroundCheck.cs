@@ -27,6 +27,7 @@ using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Security;
 using com.bemaservices.MinistrySafe;
+using com.bemaservices.MinistrySafe.Utility;
 namespace com.bemaservices.MinistrySafe.Workflow.Action
 {
     /// <summary>
@@ -50,11 +51,8 @@ namespace com.bemaservices.MinistrySafe.Workflow.Action
         public override bool Execute( RockContext rockContext, WorkflowAction action, Object entity, out List<string> errorMessages )
         {
             errorMessages = new List<string>();
-
-            var provider = new MinistrySafe();
-
-            var ministrySafe = new MinistrySafe();
-            return ministrySafe.ArchiveLinkedBackgroundChecks( rockContext, action.Activity.Workflow, out errorMessages );
+                
+            return BackgroundCheckHelper.ArchiveLinkedBackgroundChecks( rockContext, action.Activity.Workflow, out errorMessages );
         }
     }
 }

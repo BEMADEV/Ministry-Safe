@@ -27,6 +27,7 @@ using Rock.Model;
 using Rock.Web.Cache;
 using Rock.Security;
 using com.bemaservices.MinistrySafe;
+using com.bemaservices.MinistrySafe.Utility;
 namespace com.bemaservices.MinistrySafe.Workflow.Action
 {
     /// <summary>
@@ -57,12 +58,14 @@ namespace com.bemaservices.MinistrySafe.Workflow.Action
             var provider = new MinistrySafe();
             var personAttribute = AttributeCache.Get( GetAttributeValue( action, "PersonAttribute" ).AsGuid() );
             var directLoginUrlAttribute = AttributeCache.Get( GetAttributeValue( action, "DirectLoginUrl" ).AsGuid() );
+            var surveyTypeAttribute = AttributeCache.Get( GetAttributeValue( action, "SurveyTypeAttribute" ).AsGuid() );
 
-            var ministrySafe = new MinistrySafe();
-            return ministrySafe.RefreshTraining( rockContext
+            var trainingHelper = new TrainingHelper();
+            return trainingHelper.RefreshTraining( rockContext
                 , action.Activity.Workflow
                 , personAttribute
                  , directLoginUrlAttribute
+                 , surveyTypeAttribute
                  , out errorMessages );
         }
     }

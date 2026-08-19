@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Entity;
 using System.Linq;
+using com.bemaservices.MinistrySafe.Utility;
 using Quartz;
 using Rock;
 using Rock.Attribute;
@@ -50,7 +51,7 @@ namespace com.bemaservices.MinistrySafe.Jobs
         public override void Execute()
         {
             var errorMessages = new List<String>();
-            MinistrySafe.UpdateSurveyTypes( errorMessages );
+            TrainingHelper.UpdateTrainingTypes( errorMessages );
             if ( errorMessages.Any() )
             {
                 this.Result = errorMessages.JoinStrings( "," );
