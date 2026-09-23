@@ -2266,6 +2266,7 @@ namespace com.bemaservices.MinistrySafe
                 // Find Existing Match
                 if ( userResponse.PersonAliasId.IsNotNullOrWhiteSpace() )
                 {
+                    externalId = userResponse.PersonAliasId;
                     var numericExternalId = externalId.RemoveAllNonNumericCharacters().AsIntegerOrNull();
 
                     if ( numericExternalId != null )
