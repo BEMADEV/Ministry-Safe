@@ -42,7 +42,14 @@ namespace com.bemaservices.MinistrySafe.Migrations
         {
             AddPersonAttribute();
             UpdateWorkflow();
+            UpdateTrainingWorkflow();
             ReaddWorkflowsToActions();
+        }
+
+        private void UpdateTrainingWorkflow()
+        {
+            RockMigrationHelper.AddActionTypeAttributeValue( "0082F28F-AE41-4E20-88B0-4A0F791E0551", "F3E380BF-AAC8-4015-9ADC-0DF56B5462F5", @"RockEntity" ); // Awareness Training (MinistrySafe):Process Result:Get Failed Step Status Id:Enabled Lava Commands
+
         }
 
         private void ReaddWorkflowsToActions()
