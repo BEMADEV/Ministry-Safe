@@ -20,6 +20,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using com.bemaservices.MinistrySafe.Constants;
+using Rock;
 using Rock.Plugin;
 
 namespace com.bemaservices.MinistrySafe.Migrations
@@ -130,6 +131,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
         /// </summary>
         private void UpdateBackgroundCheckWorkflowType()
         {
+            var ministrySafeStatusTypeId = SqlScalar( String.Format( "Select Top 1 Id From DefinedType Where Guid = '{0}'", "A19A48A7-8EC9-4FAC-8433-B9346C790175" ) ).ToStringSafe();
 
             #region EntityTypes
 
@@ -392,7 +394,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.AddAttributeQualifier( "CBEE5051-E3CE-471A-B710-C2CF87A21ADF", "truetext", @"Yes", "D3FB3527-D50D-410C-96A5-51BEA4BB7077" ); // Background Check:I have completed the Applicant Withdrawn action within MinistrySafe:truetext
             RockMigrationHelper.AddAttributeQualifier( "030E9F35-84BE-42FE-AA03-E06A4915FB7D", "AllowAddingNewValues", @"False", "C79358AE-91B9-42A8-82B8-9D885271C947" ); // Background Check:Awaiting Security Review:AllowAddingNewValues
             RockMigrationHelper.AddAttributeQualifier( "030E9F35-84BE-42FE-AA03-E06A4915FB7D", "allowmultiple", @"False", "F3D48D31-3552-44E8-979B-B647FBAB52E8" ); // Background Check:Awaiting Security Review:allowmultiple
-            RockMigrationHelper.AddAttributeQualifier( "030E9F35-84BE-42FE-AA03-E06A4915FB7D", "definedtype", @"131", "804AE82C-2995-4282-A5CD-326E477F8BA4" ); // Background Check:Awaiting Security Review:definedtype
+            RockMigrationHelper.AddAttributeQualifier( "030E9F35-84BE-42FE-AA03-E06A4915FB7D", "definedtype", ministrySafeStatusTypeId, "804AE82C-2995-4282-A5CD-326E477F8BA4" ); // Background Check:Awaiting Security Review:definedtype
             RockMigrationHelper.AddAttributeQualifier( "030E9F35-84BE-42FE-AA03-E06A4915FB7D", "displaydescription", @"False", "D49A3C32-9A2B-47CF-ABA8-C91393CCD321" ); // Background Check:Awaiting Security Review:displaydescription
             RockMigrationHelper.AddAttributeQualifier( "030E9F35-84BE-42FE-AA03-E06A4915FB7D", "enhancedselection", @"False", "3E00AC1F-BCAA-4D3A-B821-D97B9773F35E" ); // Background Check:Awaiting Security Review:enhancedselection
             RockMigrationHelper.AddAttributeQualifier( "030E9F35-84BE-42FE-AA03-E06A4915FB7D", "includeInactive", @"False", "BA33C540-3E59-448C-AA57-6CE960D8D433" ); // Background Check:Awaiting Security Review:includeInactive
@@ -408,7 +410,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.AddAttributeQualifier( "C2978654-2D24-4CCB-825B-43892B73EE96", "SelectableDefinedValuesId", @"", "C6B03AA6-7434-4DD7-B950-AB6F6D8EBCD7" ); // Background Check:Archived MinistrySafe Status:SelectableDefinedValuesId
             RockMigrationHelper.AddAttributeQualifier( "6F463580-4305-494B-9A3C-DE181BBE4CEB", "AllowAddingNewValues", @"False", "C81795BC-5D09-401E-81AB-8D8EB53D503B" ); // Background Check:Cancelled Status:AllowAddingNewValues
             RockMigrationHelper.AddAttributeQualifier( "6F463580-4305-494B-9A3C-DE181BBE4CEB", "allowmultiple", @"False", "9D495C2B-5177-44EF-9EEE-F8919010C688" ); // Background Check:Cancelled Status:allowmultiple
-            RockMigrationHelper.AddAttributeQualifier( "6F463580-4305-494B-9A3C-DE181BBE4CEB", "definedtype", @"131", "00752F2E-CC10-4EC2-B875-67CC4D367E61" ); // Background Check:Cancelled Status:definedtype
+            RockMigrationHelper.AddAttributeQualifier( "6F463580-4305-494B-9A3C-DE181BBE4CEB", "definedtype", ministrySafeStatusTypeId, "00752F2E-CC10-4EC2-B875-67CC4D367E61" ); // Background Check:Cancelled Status:definedtype
             RockMigrationHelper.AddAttributeQualifier( "6F463580-4305-494B-9A3C-DE181BBE4CEB", "displaydescription", @"False", "229BE645-F009-4FAD-9274-4E65393CB710" ); // Background Check:Cancelled Status:displaydescription
             RockMigrationHelper.AddAttributeQualifier( "6F463580-4305-494B-9A3C-DE181BBE4CEB", "enhancedselection", @"False", "83B1AF44-38BB-480F-BFFC-73338AE551EE" ); // Background Check:Cancelled Status:enhancedselection
             RockMigrationHelper.AddAttributeQualifier( "6F463580-4305-494B-9A3C-DE181BBE4CEB", "includeInactive", @"False", "CD9C2542-9E2C-4E21-830B-E63F886EE2E8" ); // Background Check:Cancelled Status:includeInactive

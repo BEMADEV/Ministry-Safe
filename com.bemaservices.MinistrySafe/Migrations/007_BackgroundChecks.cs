@@ -19,6 +19,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using com.bemaservices.MinistrySafe.Constants;
+using Rock;
 using Rock.Plugin;
 
 namespace com.bemaservices.MinistrySafe.Migrations
@@ -57,6 +59,9 @@ namespace com.bemaservices.MinistrySafe.Migrations
         /// </summary>
         private void BackgroundCheckDefinedTypeAttributes()
         {
+            var userTypeId = SqlScalar( String.Format( "Select Top 1 Id From DefinedType Where Guid = '{0}'", MinistrySafeSystemGuid.MINISTRYSAFE_USER_TYPES ) ).ToStringSafe();
+
+
             RockMigrationHelper.AddDefinedTypeAttribute( "BC2FDF9A-93B8-4325-8DE9-2F7B1943BFDF", "3EE69CBC-35CE-4496-88CC-8327A447603F", "MinistrySafe Package Price", "MinistrySafePackagePrice", "", 1044, "", "64066AB0-CFAB-4F2F-BFF9-5919B0961345" );
             RockMigrationHelper.AddDefinedTypeAttribute( "BC2FDF9A-93B8-4325-8DE9-2F7B1943BFDF", "59D5A94C-94A0-4630-B80A-BB25697D74C7", "MinistrySafe User Type", "MinistrySafeUserType", "", 1046, "", "7B18B548-E5EE-4973-8E9D-F0BF6F7A9F4D" );
             RockMigrationHelper.AddDefinedTypeAttribute( "BC2FDF9A-93B8-4325-8DE9-2F7B1943BFDF", "9C204CD0-1233-41C5-818A-C5DA439445AA", "MinistrySafe Package Code", "MinistrySafePackageCode", "", 1043, "", "875B25A2-B9EA-4D29-AE3E-30D93216FBA5" );
@@ -64,7 +69,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.AddDefinedTypeAttribute( "BC2FDF9A-93B8-4325-8DE9-2F7B1943BFDF", "A75DFC58-7A1B-4799-BF31-451B2BBE38FF", "MinistrySafe Package Level", "MinistrySafePackageLevel", "", 1042, "", "7498F509-D8B5-49B5-8431-B3F36DB2BF06" );
 
             RockMigrationHelper.AddAttributeQualifier( "7B18B548-E5EE-4973-8E9D-F0BF6F7A9F4D", "allowmultiple", "False", "41DA4A9D-D39C-4BD7-9B1C-B8567BED5FA8" );
-            RockMigrationHelper.AddAttributeQualifier( "7B18B548-E5EE-4973-8E9D-F0BF6F7A9F4D", "definedtype", "86", "90DD7CAA-DB3B-4FF0-9FD7-DD5DB1895791" );
+            RockMigrationHelper.AddAttributeQualifier( "7B18B548-E5EE-4973-8E9D-F0BF6F7A9F4D", "definedtype", userTypeId, "90DD7CAA-DB3B-4FF0-9FD7-DD5DB1895791" );
             RockMigrationHelper.AddAttributeQualifier( "7B18B548-E5EE-4973-8E9D-F0BF6F7A9F4D", "displaydescription", "False", "15BDD6C9-25D8-4BEF-8B11-21DE63FBA632" );
             RockMigrationHelper.AddAttributeQualifier( "7B18B548-E5EE-4973-8E9D-F0BF6F7A9F4D", "enhancedselection", "False", "74A6B839-C25D-4C8B-A620-E5BB082E0198" );
             RockMigrationHelper.AddAttributeQualifier( "7B18B548-E5EE-4973-8E9D-F0BF6F7A9F4D", "includeInactive", "False", "9BD5F440-9885-44D1-8394-7B24F5EFB3A4" );
@@ -716,8 +721,8 @@ namespace com.bemaservices.MinistrySafe.Migrations
         /// </summary>
         private void UpdateMinistrySafePage()
         {
-            RockMigrationHelper.AddOrUpdateEntityAttribute( "com.bemaservices.MinistrySafe.MinistrySafe", Rock.SystemGuid.FieldType.ENCRYPTED_TEXT, "", "", "Access Token", "", "MinistrySafe Access Token", 0, "", "d582affe-7331-43c6-a006-95c291db4bad","AccessToken" );
-            RockMigrationHelper.AddOrUpdateEntityAttribute( "com.bemaservices.MinistrySafe.MinistrySafe", Rock.SystemGuid.FieldType.BOOLEAN, "", "", "Is Staging Environment", "", "Checkr Access Token", 1, "", "80c0f4de-39e8-45e4-9cfc-8f59e401242c","IsStagingEnvironment" );
+            RockMigrationHelper.AddOrUpdateEntityAttribute( "com.bemaservices.MinistrySafe.MinistrySafe", Rock.SystemGuid.FieldType.ENCRYPTED_TEXT, "", "", "Access Token", "", "MinistrySafe Access Token", 0, "", "d582affe-7331-43c6-a006-95c291db4bad", "AccessToken" );
+            RockMigrationHelper.AddOrUpdateEntityAttribute( "com.bemaservices.MinistrySafe.MinistrySafe", Rock.SystemGuid.FieldType.BOOLEAN, "", "", "Is Staging Environment", "", "Checkr Access Token", 1, "", "80c0f4de-39e8-45e4-9cfc-8f59e401242c", "IsStagingEnvironment" );
 
 
             RockMigrationHelper.DeletePage( "5C7EA1BE-FC79-4821-8FA3-759F8C65C87B" );

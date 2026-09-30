@@ -127,7 +127,7 @@ namespace com.bemaservices.MinistrySafe
                         return true;
                     }
 
-                    if ( !EmailAddressFieldValidator.IsValid(person.Email))
+                    if ( !EmailAddressFieldValidator.IsValid( person.Email ) )
                     {
                         errorMessages.Add( "Person does not have a valid email address." );
                         UpdateWorkflowRequestStatus( workflow, rockContext, "FAIL" );
@@ -1033,6 +1033,11 @@ namespace com.bemaservices.MinistrySafe
             if ( userTypeDefinedValue != null )
             {
                 rawUserType = userTypeDefinedValue.Value;
+            }
+
+            if ( rawUserType == null )
+            {
+                return false;
             }
 
             var formattedUserType = rawUserType.ToLower().Trim();
