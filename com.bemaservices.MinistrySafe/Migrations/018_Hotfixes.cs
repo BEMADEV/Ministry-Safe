@@ -45,6 +45,39 @@ namespace com.bemaservices.MinistrySafe.Migrations
             RockMigrationHelper.AddActionTypeAttributeValue( "15C6C2E1-99F0-4A40-91E4-F2175FF9A7B9", "0415C959-BF89-4D19-9C47-3AB1098E1FBA", @"{{ 'Now' | Date:'yyyy-MM-ddTHH:mm:ss' }}" ); // Awareness Training (MinistrySafe):Process Result:Complete Step:Property Value|Property Value Attribute
             RockMigrationHelper.AddActionTypeAttributeValue( "2C33553C-CF30-47A2-B1AF-21C73DDBA83E", "94689BDE-493E-4869-A614-2D54822D747C", @"{{ 'Now' | Date:'yyyy-MM-ddTHH:mm:ss' }}" ); // Awareness Training (MinistrySafe):Send Reminder and Close Workflow:Set Training Request Date:Value|Attribute Value
 
+            Sql( @"
+        DECLARE @ActionTypeGuids TABLE (Guid uniqueidentifier);
+        INSERT INTO @ActionTypeGuids (Guid)
+        VALUES
+            ('81D800B4-1E84-4C4A-A3C6-71EE0A84F27A'),
+            ('9EEC1893-684E-455A-8692-E19C1CF7A4F8'),
+            ('DE5565A0-4DE5-4C71-98A5-8605B807388B'),
+            ('15CEB2DC-460D-46F7-A4E3-87AA42627721'),
+            ('767B03F0-D3C4-448D-AB8A-EFF907EF770C');
+
+        DECLARE @ActivityTypeGuid uniqueidentifier =
+            '11095333-04F2-4594-9681-403AA98EA48E';
+
+        BEGIN TRANSACTION;
+
+        DELETE wa
+        FROM dbo.WorkflowAction wa
+        LEFT JOIN dbo.WorkflowActivity activity
+            ON activity.Id = wa.WorkflowActivityId
+        LEFT JOIN dbo.WorkflowActivityType activityType
+            ON activityType.Id = activity.WorkflowActivityTypeId
+        LEFT JOIN dbo.WorkflowActionType actionType
+            ON actionType.Id = wa.WorkflowActionTypeId
+        WHERE actionType.Guid IN (SELECT Guid FROM @ActionTypeGuids)
+           OR activityType.Guid = @ActivityTypeGuid;
+
+        DELETE activity
+        FROM dbo.WorkflowActivity activity
+        INNER JOIN dbo.WorkflowActivityType activityType
+            ON activityType.Id = activity.WorkflowActivityTypeId
+        WHERE activityType.Guid = @ActivityTypeGuid;
+                " );
+
             RockMigrationHelper.DeleteWorkflowActionType( "81D800B4-1E84-4C4A-A3C6-71EE0A84F27A" ); // Background Check (MinistrySafe):Submit Request:Launch Expiration Handling
             RockMigrationHelper.DeleteWorkflowActionType( "9EEC1893-684E-455A-8692-E19C1CF7A4F8" ); // Background Check (MinistrySafe):Handle Expired Result:Delay 1 Week
             RockMigrationHelper.DeleteWorkflowActionType( "DE5565A0-4DE5-4C71-98A5-8605B807388B" ); // Background Check (MinistrySafe):Handle Expired Result:Complete Activity if Background Check has been completed
