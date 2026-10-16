@@ -35,18 +35,30 @@ namespace com.bemaservices.MinistrySafe.Jobs
     /// Job to update MinistrySafe step statuses based on completion dates and expiration thresholds.
     /// </summary>
     /// <seealso cref="IJob" />
-    [IntegerField( "Days Until Expiring",
-        Description = "The number of days after completion when a step should be marked as Expiring.",
+    [IntegerField( "Training Days Until Expiring",
+        Description = "The number of days after completion when a training step should be marked as Expiring.",
         IsRequired = true,
         DefaultIntegerValue = 700,
         Key = "DaysUntilExpiring",
         Order = 0 )]
-    [IntegerField( "Days Until Expired",
-        Description = "The number of days after completion when a step should be marked as Expired.",
+    [IntegerField( "Training Days Until Expired",
+        Description = "The number of days after completion when a training step should be marked as Expired.",
         IsRequired = true,
         DefaultIntegerValue = 730,
         Key = "DaysUntilExpired",
         Order = 1 )]
+    [IntegerField( "Background Check Days Until Expiring",
+        Description = "The number of days after approval when a background check should be marked as Expiring.",
+        IsRequired = true,
+        DefaultIntegerValue = 700,
+        Key = "BackgroundCheckDaysUntilExpiring",
+        Order = 2 )]
+    [IntegerField( "Background Check Days Until Expired",
+        Description = "The number of days after approval when a background check should be marked as Expired.",
+        IsRequired = true,
+        DefaultIntegerValue = 730,
+        Key = "BackgroundCheckDaysUntilExpired",
+        Order = 3 )]
     [DisallowConcurrentExecution]
     public class UpdateStepStatuses : RockJob
     {
@@ -62,8 +74,10 @@ namespace com.bemaservices.MinistrySafe.Jobs
         /// </summary>
         public override void Execute()
         {
-            var daysUntilExpiring = GetAttributeValue( "DaysUntilExpiring" ).AsIntegerOrNull() ?? 700;
-            var daysUntilExpired = GetAttributeValue( "DaysUntilExpired" ).AsIntegerOrNull() ?? 730;
+            var trainingDaysUntilExpiring = GetAttributeValue( "DaysUntilExpiring" ).AsIntegerOrNull() ?? 700;
+            var trainingDaysUntilExpired = GetAttributeValue( "DaysUntilExpired" ).AsIntegerOrNull() ?? 730;
+            var backgroundCheckDaysUntilExpiring = GetAttributeValue( "BackgroundCheckDaysUntilExpiring" ).AsIntegerOrNull() ?? 700;
+            var backgroundCheckDaysUntilExpired = GetAttributeValue( "BackgroundCheckDaysUntilExpired" ).AsIntegerOrNull() ?? 730;
 
             int stepsMarkedExpiring = 0;
             int stepsMarkedExpired = 0;
@@ -72,79 +86,100 @@ namespace com.bemaservices.MinistrySafe.Jobs
             var stepService = new StepService( rockContext );
             var stepProgramService = new StepProgramService( rockContext );
             var stepStatusService = new StepStatusService( rockContext );
-            var stepProgramGuid = Constants.MinistrySafeSystemGuid.MINISTRYSAFE_TRAINING_PROGRAM.AsGuid();
-
-            // Get MinistrySafe Step Program
-            var ministrySafeProgram = stepProgramService
-                .Queryable()
-                .AsNoTracking()
-                .FirstOrDefault( sp => sp.Guid == stepProgramGuid );
-
-            if ( ministrySafeProgram == null )
-            {
-                this.Result = "MinistrySafe Step Program not found.";
-                return;
-            }
-
-            // Get Step Statuses
-            var passedStatus = stepStatusService
-                .Queryable()
-                .AsNoTracking()
-                .FirstOrDefault( ss => ss.Name == "Passed" );
-
-            var expiringStatus = stepStatusService
-                .Queryable()
-                .AsNoTracking()
-                .FirstOrDefault( ss => ss.Name == "Expiring" );
-
-            var expiredStatus = stepStatusService
-                .Queryable()
-                .AsNoTracking()
-                .FirstOrDefault( ss => ss.Name == "Expired" );
-
-            if ( passedStatus == null || expiringStatus == null || expiredStatus == null )
-            {
-                this.Result = "Required step statuses (Passed, Expiring, Expired) not found.";
-                return;
-            }
-
             var today = RockDateTime.Today;
-            var expiringThresholdDate = today.AddDays( -daysUntilExpiring );
-            var expiredThresholdDate = today.AddDays( -daysUntilExpired );
-
-            // Update Passed steps to Expiring
-            var passedSteps = stepService
-                .Queryable()
-                .Where( s => s.StepType.StepProgramId == ministrySafeProgram.Id )
-                .Where( s => s.StepStatusId == passedStatus.Id )
-                .Where( s => s.CompletedDateTime.HasValue )
-                .Where( s => s.CompletedDateTime.Value < expiringThresholdDate )
-                .ToList();
-
-            foreach ( var step in passedSteps )
+            var stepProgramConfigurations = new[]
             {
-                step.StepStatusId = expiringStatus.Id;
-                stepsMarkedExpiring++;
+                new
+                {
+                    ProgramGuid = Constants.MinistrySafeSystemGuid.MINISTRYSAFE_TRAINING_PROGRAM.AsGuid(),
+                    CompletionStatusName = "Passed",
+                    DaysUntilExpiring = trainingDaysUntilExpiring,
+                    DaysUntilExpired = trainingDaysUntilExpired
+                },
+                new
+                {
+                    ProgramGuid = Constants.MinistrySafeSystemGuid.MINISTRYSAFE_BACKGROUNDCHECK_PROGRAM.AsGuid(),
+                    CompletionStatusName = "Approved",
+                    DaysUntilExpiring = backgroundCheckDaysUntilExpiring,
+                    DaysUntilExpired = backgroundCheckDaysUntilExpired
+                }
+            };
+            var programsProcessed = 0;
+
+            foreach ( var programConfiguration in stepProgramConfigurations )
+            {
+                var ministrySafeProgram = stepProgramService
+                    .Queryable()
+                    .AsNoTracking()
+                    .FirstOrDefault( sp => sp.Guid == programConfiguration.ProgramGuid );
+
+                if ( ministrySafeProgram == null )
+                {
+                    continue;
+                }
+
+                var completionStatus = stepStatusService
+                    .Queryable()
+                    .AsNoTracking()
+                    .FirstOrDefault( ss => ss.StepProgramId == ministrySafeProgram.Id && ss.Name == programConfiguration.CompletionStatusName );
+
+                var expiringStatus = stepStatusService
+                    .Queryable()
+                    .AsNoTracking()
+                    .FirstOrDefault( ss => ss.StepProgramId == ministrySafeProgram.Id && ss.Name == "Expiring" );
+
+                var expiredStatus = stepStatusService
+                    .Queryable()
+                    .AsNoTracking()
+                    .FirstOrDefault( ss => ss.StepProgramId == ministrySafeProgram.Id && ss.Name == "Expired" );
+
+                if ( completionStatus == null || expiringStatus == null || expiredStatus == null )
+                {
+                    this.Result = string.Format( "Required step statuses ({0}, Expiring, Expired) not found for '{1}'.", programConfiguration.CompletionStatusName, ministrySafeProgram.Name );
+                    return;
+                }
+
+                var expiringThresholdDate = today.AddDays( -programConfiguration.DaysUntilExpiring );
+                var expiredThresholdDate = today.AddDays( -programConfiguration.DaysUntilExpired );
+                var completedSteps = stepService
+                    .Queryable()
+                    .Where( s => s.StepType.StepProgramId == ministrySafeProgram.Id )
+                    .Where( s => s.StepStatusId == completionStatus.Id )
+                    .Where( s => s.CompletedDateTime.HasValue )
+                    .Where( s => s.CompletedDateTime.Value < expiringThresholdDate )
+                    .ToList();
+
+                foreach ( var step in completedSteps )
+                {
+                    step.StepStatusId = expiringStatus.Id;
+                    stepsMarkedExpiring++;
+                }
+
+                rockContext.SaveChanges();
+
+                var expiringSteps = stepService
+                    .Queryable()
+                    .Where( s => s.StepType.StepProgramId == ministrySafeProgram.Id )
+                    .Where( s => s.StepStatusId == expiringStatus.Id )
+                    .Where( s => s.CompletedDateTime.HasValue )
+                    .Where( s => s.CompletedDateTime.Value < expiredThresholdDate )
+                    .ToList();
+
+                foreach ( var step in expiringSteps )
+                {
+                    step.StepStatusId = expiredStatus.Id;
+                    stepsMarkedExpired++;
+                }
+
+                rockContext.SaveChanges();
+                programsProcessed++;
             }
 
-            rockContext.SaveChanges();
-
-            // Update Expiring steps to Expired
-            var expiringSteps = stepService
-                .Queryable()
-                .Where( s => s.StepType.StepProgramId == ministrySafeProgram.Id )
-                .Where( s => s.StepStatusId == expiringStatus.Id )
-                .Where( s => s.CompletedDateTime.HasValue )
-                .Where( s => s.CompletedDateTime.Value < expiredThresholdDate )
-                .ToList();
-
-            foreach ( var step in expiringSteps )
+            if ( programsProcessed == 0 )
             {
-                step.StepStatusId = expiredStatus.Id;
-                stepsMarkedExpired++;
+                this.Result = "MinistrySafe Step Programs not found.";
+                return;
             }
-
-            rockContext.SaveChanges();
 
             this.Result = string.Format( "{0} step{1} marked as Expiring, {2} step{3} marked as Expired.",
                 stepsMarkedExpiring,
