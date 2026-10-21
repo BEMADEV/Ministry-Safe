@@ -58,23 +58,21 @@ namespace com.bemaservices.MinistrySafe.Migrations
         DECLARE @ActivityTypeGuid uniqueidentifier =
             '11095333-04F2-4594-9681-403AA98EA48E';
 
-        BEGIN TRANSACTION;
-
         DELETE wa
         FROM dbo.WorkflowAction wa
         LEFT JOIN dbo.WorkflowActivity activity
-            ON activity.Id = wa.WorkflowActivityId
+            ON activity.Id = wa.ActivityId
         LEFT JOIN dbo.WorkflowActivityType activityType
-            ON activityType.Id = activity.WorkflowActivityTypeId
+            ON activityType.Id = activity.ActivityTypeId
         LEFT JOIN dbo.WorkflowActionType actionType
-            ON actionType.Id = wa.WorkflowActionTypeId
+            ON actionType.Id = wa.ActionTypeId
         WHERE actionType.Guid IN (SELECT Guid FROM @ActionTypeGuids)
            OR activityType.Guid = @ActivityTypeGuid;
 
         DELETE activity
         FROM dbo.WorkflowActivity activity
         INNER JOIN dbo.WorkflowActivityType activityType
-            ON activityType.Id = activity.WorkflowActivityTypeId
+            ON activityType.Id = activity.ActivityTypeId
         WHERE activityType.Guid = @ActivityTypeGuid;
                 " );
 
