@@ -96,5 +96,15 @@ namespace com.bemaservices.MinistrySafe.Constants
         /// The ministrysafe attribute server URL
         /// </summary>
         public const string MINISTRYSAFE_ATTRIBUTE_SERVER_URL = "MinistrySafeServerUrl";
+
+        /// <summary>
+        /// The MinistrySafe webhook authentication username.
+        /// </summary>
+        public const string MINISTRYSAFE_ATTRIBUTE_WEBHOOK_USERNAME = "WebhookAuthenticationUsername";
+
+        /// <summary>
+        /// The MinistrySafe webhook authentication password.
+        /// </summary>
+        public const string MINISTRYSAFE_ATTRIBUTE_WEBHOOK_PASSWORD = "WebhookAuthenticationPassword";
     }
 }
