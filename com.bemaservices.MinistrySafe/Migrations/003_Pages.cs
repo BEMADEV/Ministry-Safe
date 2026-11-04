@@ -38,7 +38,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
         {          
             // Page: Ministry Safe
             RockMigrationHelper.AddPage("C831428A-6ACD-4D49-9B2D-046D399E3123","D65F783D-87A9-4CC9-8110-E83466A0EADB","Ministry Safe","","5C7EA1BE-FC79-4821-8FA3-759F8C65C87B","fa fa-shield"); // Site:Rock RMS
-            RockMigrationHelper.UpdateBlockType( "User List", "Lists all the Ministry Safe Users.", "~/Plugins/com_bemaservices/Security/MinistrySafe/UserList.ascx", "BEMA Services > Ministry Safe", "D8BF3D63-C063-4A13-A22C-4AD7C3B331B3" );
+            RockMigrationHelper.UpdateBlockType( "MinistrySafe Training List", "Lists all the MinistrySafe background check requests.", "~/Plugins/com_bemaservices/MinistrySafe/MinistrySafeTrainingList.ascx", "BEMA Services > MinistrySafe", "D8BF3D63-C063-4A13-A22C-4AD7C3B331B3" );
             // Add Block to Page: Ministry Safe, Site: Rock RMS
             RockMigrationHelper.AddBlock( true, "5C7EA1BE-FC79-4821-8FA3-759F8C65C87B","","D8BF3D63-C063-4A13-A22C-4AD7C3B331B3","User List","Main","","",0,"67D69BD8-E164-4E6C-B038-2609C9330760");   
             // Attrib for BlockType: User List:Workflow Detail Page

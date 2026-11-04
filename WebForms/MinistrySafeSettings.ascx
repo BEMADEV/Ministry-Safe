@@ -26,6 +26,9 @@
                                     <Rock:RockTextBox ID="tbAccessToken" runat="server" Label="MinistrySafe API Token" Required="true" RequiredErrorMessage="A MinistrySafe API Token is Required" Help="The MinistrySafe Access Token is generated when a MinistrySafe Account is created on the Rock website." />
                                     <Rock:RockTextBox ID="tbServerUrl" runat="server" Label="MinistrySafe API Server Url" Required="true" RequiredErrorMessage="A MinistrySafe API Server Url is Required" Help="This is generally https://safetysystem.abusepreventionsystems.com/api/ for production environments, and https://staging.ministrysafe.com/api/ in staging environments." />
                                     <Rock:RockCheckBox ID="cbEnableDebugging" runat="server" Label="Enable Debugging?" />
+                                    <Rock:RockTextBox ID="tbWebhookUsername" runat="server" Label="Webhook Authentication Username" Help="Optional. Configure with a password to require HTTP Basic Authentication for incoming MinistrySafe webhooks." />
+                                    <Rock:RockTextBox ID="tbWebhookPassword" runat="server" Label="Webhook Authentication Password" TextMode="Password" Help="Leave blank to keep the saved password. Use the checkbox below to clear both credentials." />
+                                    <Rock:RockCheckBox ID="cbClearWebhookCredentials" runat="server" Label="Clear saved webhook authentication credentials" />
                                     <div class="actions">
                                         <asp:LinkButton ID="btnSave" runat="server" CssClass="btn btn-primary" OnClick="btnSave_Click">Save</asp:LinkButton>
                                     </div>
