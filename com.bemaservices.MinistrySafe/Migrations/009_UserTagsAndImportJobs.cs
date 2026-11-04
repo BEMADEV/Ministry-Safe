@@ -448,6 +448,12 @@ namespace com.bemaservices.MinistrySafe.Migrations
 			INNER JOIN [DefinedType] [dt] ON CAST([dt].[guid] AS varchar(50) ) = [aq].[value]
 			WHERE [ft].[class] = 'Rock.Field.Types.DefinedValueFieldType'
 			AND [aq].[key] = 'definedtypeguid'
+			AND NOT EXISTS (
+				SELECT 1
+				FROM [AttributeQualifier] [existingQualifier]
+				WHERE [existingQualifier].[AttributeId] = [aq].[AttributeId]
+					AND [existingQualifier].[key] = 'definedtype'
+			)
             And ( Select top 1 Id from AttributeQualifier aq1 Where aq1.[Key] = 'definedtype' and aq1.AttributeId = aq.AttributeId ) is null
 		" );
             #endregion

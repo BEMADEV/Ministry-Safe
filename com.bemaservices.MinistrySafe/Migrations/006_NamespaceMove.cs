@@ -39,7 +39,7 @@ namespace com.bemaservices.MinistrySafe.Migrations
             // Page: Ministry Safe
             Sql( @"
                 Update BlockType
-                Set Path = '~/Plugins/com_bemaservices/MinistrySafe/UserList.ascx'
+                Set Path = '~/Plugins/com_bemaservices/MinistrySafe/MinistrySafeTrainingList.ascx'
                 Where Path = '~/Plugins/com_bemaservices/Security/MinistrySafe/UserList.ascx'
                 " );
         }

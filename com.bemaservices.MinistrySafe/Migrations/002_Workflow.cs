@@ -367,7 +367,23 @@ namespace com.bemaservices.MinistrySafe.Migrations
 
             #region DefinedValue AttributeType qualifier helper
 
-            Sql( @"     UPDATE [aq] SET [key] = 'definedtype', [Value] = CAST( [dt].[Id] as varchar(5) )     FROM [AttributeQualifier] [aq]     INNER JOIN [Attribute] [a] ON [a].[Id] = [aq].[AttributeId]     INNER JOIN [FieldType] [ft] ON [ft].[Id] = [a].[FieldTypeId]     INNER JOIN [DefinedType] [dt] ON CAST([dt].[guid] AS varchar(50) ) = [aq].[value]     WHERE [ft].[class] = 'Rock.Field.Types.DefinedValueFieldType'     AND [aq].[key] = 'definedtypeguid'    " );
+            Sql( @"
+                UPDATE [aq]
+                SET [key] = 'definedtype',
+                    [Value] = CAST( [dt].[Id] as varchar(5) )
+                FROM [AttributeQualifier] [aq]
+                INNER JOIN [Attribute] [a] ON [a].[Id] = [aq].[AttributeId]
+                INNER JOIN [FieldType] [ft] ON [ft].[Id] = [a].[FieldTypeId]
+                INNER JOIN [DefinedType] [dt] ON CAST( [dt].[guid] AS varchar(50) ) = [aq].[value]
+                WHERE [ft].[class] = 'Rock.Field.Types.DefinedValueFieldType'
+                    AND [aq].[key] = 'definedtypeguid'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM [AttributeQualifier] [existingQualifier]
+                        WHERE [existingQualifier].[AttributeId] = [aq].[AttributeId]
+                            AND [existingQualifier].[key] = 'definedtype'
+                    )
+            " );
 
             #endregion
         }
