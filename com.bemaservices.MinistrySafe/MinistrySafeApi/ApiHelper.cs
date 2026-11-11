@@ -686,28 +686,31 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         internal static bool ResendTraining(
             int userId,
-            string trainingId,
+            int trainingId,
+            out TrainingAttemptV3 trainingAttemptV3,
             List<string> errorMessages )
         {
+            trainingAttemptV3 = null;
             RestClient restClient = RestClient();
-            RestRequest restRequest = new RestRequest( String.Format( "{0}/assign", MinistrySafeConstants.MINISTRYSAFE_TRAININGS_URL, trainingId ), Method.POST );
+            RestRequest restRequest = new RestRequest( 
+                String.Format( "{0}/{1}/refresh_training_link", 
+                    MinistrySafeConstants.MINISTRYSAFE_USERS_URL, 
+                    userId ), 
+                Method.POST );
 
             var trainingAssignment = new TrainingAssignmentV3();
-            trainingAssignment.UserId = userId;
             trainingAssignment.SendEmail = false;
-            trainingAssignment.UpfrontPayment = true;
 
             restRequest.AddJsonBody( trainingAssignment );
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.Created, "Failed to Resend MinistrySafe Training: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to Resend MinistrySafe Training: ", errorMessages ) )
             {
                 return false;
             }
 
-            TrainingAssignmentV3 resendTrainingResponse;
-            if ( !TryDeserializeResponse( restResponse, "Resend Training Response is not valid: ", out resendTrainingResponse, errorMessages ) )
+            if ( !TryDeserializeResponse( restResponse, "Resend Training Response is not valid: ", out trainingAttemptV3, errorMessages ) )
             {
                 return false;
             }

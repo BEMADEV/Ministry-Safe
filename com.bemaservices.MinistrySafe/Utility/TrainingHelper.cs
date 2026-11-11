@@ -980,7 +980,7 @@ namespace com.bemaservices.MinistrySafe.Utility
 
             trainingLink = null;
             TrainingAttemptV3 trainingAttemptV3;
-            if ( ApiHelper.AssignTraining( userId, trainingId, out trainingAttemptV3, errorMessages ) )
+            if ( ApiHelper.ResendTraining( userId, trainingId, out trainingAttemptV3, errorMessages ) )
             {
                 trainingLink = trainingAttemptV3.DirectLoginUrl;
                 return true;
