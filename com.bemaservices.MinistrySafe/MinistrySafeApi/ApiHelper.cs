@@ -464,7 +464,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             var backgroundCheckAssignment = new QuickAppAssignmentV3();
             backgroundCheckAssignment.UserId = userId;
             backgroundCheckAssignment.Level = level ?? 0;
-            backgroundCheckAssignment.CustomBackgroundCheckPackageCode = packageCode.IsNotNullOrWhiteSpace() ? packageCode : null;
+            backgroundCheckAssignment.CustomBackgroundCheckPackageCode = packageCode.IsNotNullOrWhiteSpace() && level.IsNullOrZero() ? packageCode : null;
             backgroundCheckAssignment.UserType = userType.IsNotNullOrWhiteSpace() ? userType : null;
             backgroundCheckAssignment.SalaryRange = salaryRange.IsNotNullOrWhiteSpace() ? salaryRange : null;
             backgroundCheckAssignment.ChildServing = childServing ?? false;

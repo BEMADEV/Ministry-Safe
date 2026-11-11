@@ -1037,7 +1037,8 @@ namespace com.bemaservices.MinistrySafe.Utility
                 IsActive = true,
                 DefinedTypeId = definedType.Id,
                 ForeignId = 4,
-                Value = string.Format( "{0}{1} {2}", MinistrySafeConstants.MINISTRYSAFE_TYPENAME_PREFIX, userType != null ? userType.Description : "", backgroundCheckLevel.Name.Replace( '_', ' ' ) )
+                Value = string.Format( "{0}{1} {2}", MinistrySafeConstants.MINISTRYSAFE_TYPENAME_PREFIX, userType != null ? userType.Description : "", backgroundCheckLevel.Name.Replace( '_', ' ' ) ),
+                Description = backgroundCheckLevel.Details.JoinStringsWithCommaAnd()
             };
 
             definedValueService.Add( definedValue );
@@ -1047,7 +1048,8 @@ namespace com.bemaservices.MinistrySafe.Utility
             definedValue.LoadAttributes( rockContext );
 
             definedValue.SetAttributeValue( "MinistrySafePackageName", backgroundCheckLevel.Name );
-            definedValue.SetAttributeValue( "MinistrySafePackageLevel", backgroundCheckLevel.Level );
+            definedValue.SetAttributeValue( "MinistrySafePackageLevel", backgroundCheckLevel.Level.AsIntegerOrNull() );
+            definedValue.SetAttributeValue( "MinistrySafePackageCode", backgroundCheckLevel.Level );
             definedValue.SetAttributeValue( "MinistrySafePackagePrice", backgroundCheckLevel.Price );
 
             if ( userType != null )

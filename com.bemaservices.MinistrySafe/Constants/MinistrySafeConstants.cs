@@ -48,9 +48,9 @@ namespace com.bemaservices.MinistrySafe.Constants
         public const string MINISTRYSAFE_USERS_URL = "v3/users";
 
         /// <summary>
-        /// The packages URL (V2 only - may not exist in V3)
+        /// The packages URL
         /// </summary>
-        public const string MINISTRYSAFE_PACKAGES_URL = "v2/custom_background_check_packages";
+        public const string MINISTRYSAFE_PACKAGES_URL = "v3/background_checks/levels";
 
         /// <summary>
         /// The ministrysafe tags URL (V2 only - may not exist in V3)
