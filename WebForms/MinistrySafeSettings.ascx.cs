@@ -413,9 +413,8 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                     accessToken = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
                     serverUrl = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
                     enableDebugging = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, false ).AsBoolean();
-                    webhookUsername = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_USERNAME );
-                    webhookPasswordConfigured = !string.IsNullOrEmpty(
-                        com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_PASSWORD ) );
+                    webhookUsername = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_USERNAME );
+                    webhookPasswordConfigured = !string.IsNullOrEmpty( SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_PASSWORD ) );
 
                     if ( accessToken.IsNullOrWhiteSpace() )
                     {
