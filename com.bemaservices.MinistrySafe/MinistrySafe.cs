@@ -25,7 +25,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using com.bemaservices.MinistrySafe.Constants;
-using com.bemaservices.MinistrySafe.Migrations;
 using com.bemaservices.MinistrySafe.MinistrySafeApi;
 using com.bemaservices.MinistrySafe.Model;
 using Humanizer;
@@ -34,7 +33,6 @@ using Rock;
 using Rock.Attribute;
 using Rock.Communication;
 using Rock.Data;
-using Rock.IpAddress;
 using Rock.Model;
 using Rock.Security;
 using Rock.Web.Cache;
@@ -239,20 +237,6 @@ namespace com.bemaservices.MinistrySafe
                         backgroundCheck.RequestDate = RockDateTime.Now;
                         backgroundCheck.RequestId = requestId;
                         newRockContext.SaveChanges();
-
-                        backgroundCheck.LoadAttributes( newRockContext );
-                        backgroundCheck.SetAttributeValue( "BackgroundCheckType", workflow.GetAttributeValue( requestTypeAttribute.Key ) );
-                        backgroundCheck.SaveAttributeValues( newRockContext );
-                        newRockContext.SaveChanges();
-
-                        var backgroundCheckStep = SynchronizeBackgroundCheckStep(
-                            newRockContext,
-                            backgroundCheck,
-                            ministrySafeStatus: workflow.GetAttributeValue( "MinistrySafeStatus" ) );
-                        if ( backgroundCheckStep != null && workflow.Attributes.ContainsKey( "Step" ) )
-                        {
-                            workflow.SetAttributeValue( "Step", backgroundCheckStep.Guid.ToString() );
-                        }
                     }
 
                     UpdateWorkflowRequestStatus( workflow, rockContext, "SUCCESS" );
@@ -580,280 +564,6 @@ namespace com.bemaservices.MinistrySafe
             }
         }
 
-        /// <summary>
-        /// Updates the background check.
-        /// </summary>
-        /// <param name="requestId">The request identifier.</param>
-        /// <param name="externalId">The external identifier.</param>
-        /// <param name="resultsUrl">The results URL.</param>
-        /// <param name="userId">The user identifier.</param>
-        /// <param name="level">The level.</param>
-        /// <param name="customPackageCode">The custom package code.</param>
-        /// <param name="status">The status.</param>
-        /// <param name="completionDate">The completion date.</param>
-        /// <param name="orderDate">The order date.</param>
-        /// <param name="tazworkFlagged">if set to <c>true</c> [tazwork flagged].</param>
-        /// <param name="workflowTypeCache">The workflow type cache.</param>
-        /// <param name="relaunchCompletedWorkflows">if set to <c>true</c>, launch a new workflow if the existing workflow has already completed.</param>
-        /// <param name="interactionId">The interaction identifier.</param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        internal static Step SynchronizeBackgroundCheckStep( RockContext rockContext, BackgroundCheck backgroundCheck, string reportStatus = null, string customPackageCode = null, int? level = null, string ministrySafeStatus = null )
-        {
-            if ( rockContext == null || backgroundCheck == null )
-            {
-                return null;
-            }
-
-            backgroundCheck.LoadAttributes( rockContext );
-            Rock.Model.Workflow linkedWorkflow = null;
-            if ( backgroundCheck.WorkflowId.HasValue )
-            {
-                linkedWorkflow = new WorkflowService( rockContext ).Get( backgroundCheck.WorkflowId.Value );
-                linkedWorkflow?.LoadAttributes();
-            }
-
-            var ministrySafeStatusGuid = ministrySafeStatus.AsGuidOrNull();
-            if ( !ministrySafeStatusGuid.HasValue && linkedWorkflow != null )
-            {
-                ministrySafeStatusGuid = linkedWorkflow.GetAttributeValue( "MinistrySafeStatus" ).AsGuidOrNull();
-            }
-
-            var backgroundCheckTypeGuid = backgroundCheck.GetAttributeValue( "BackgroundCheckType" ).AsGuidOrNull();
-            var backgroundCheckType = backgroundCheckTypeGuid.HasValue ? DefinedValueCache.Get( backgroundCheckTypeGuid.Value ) : null;
-            if ( backgroundCheckType == null && linkedWorkflow != null )
-            {
-                var workflowPackageTypeGuid = linkedWorkflow.GetAttributeValue( "PackageType" ).AsGuidOrNull();
-                if ( workflowPackageTypeGuid.HasValue )
-                {
-                    backgroundCheckType = DefinedValueCache.Get( workflowPackageTypeGuid.Value );
-                }
-            }
-
-            var backgroundCheckDefinedType = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.BACKGROUND_CHECK_TYPES.AsGuid() );
-            if ( backgroundCheckType == null && backgroundCheckDefinedType != null )
-            {
-                if ( backgroundCheck.PackageName.IsNotNullOrWhiteSpace() )
-                {
-                    backgroundCheckType = backgroundCheckDefinedType.DefinedValues.FirstOrDefault( dv =>
-                        string.Equals( dv.Value, backgroundCheck.PackageName, StringComparison.OrdinalIgnoreCase ) ||
-                        string.Equals( dv.GetAttributeValue( "MinistrySafePackageName" ), backgroundCheck.PackageName, StringComparison.OrdinalIgnoreCase ) );
-                }
-
-                if ( backgroundCheckType == null && customPackageCode.IsNotNullOrWhiteSpace() )
-                {
-                    backgroundCheckType = backgroundCheckDefinedType.DefinedValues.FirstOrDefault( dv =>
-                        string.Equals( dv.GetAttributeValue( "MinistrySafePackageCode" ), customPackageCode, StringComparison.OrdinalIgnoreCase ) );
-                }
-
-                if ( backgroundCheckType == null && level.HasValue )
-                {
-                    var levelString = level.Value.ToString();
-                    backgroundCheckType = backgroundCheckDefinedType.DefinedValues.FirstOrDefault( dv =>
-                        string.Equals( dv.GetAttributeValue( "MinistrySafePackageLevel" ), levelString, StringComparison.OrdinalIgnoreCase ) );
-                }
-
-            }
-
-            if ( backgroundCheckType != null && backgroundCheckTypeGuid != backgroundCheckType.Guid )
-            {
-                backgroundCheck.SetAttributeValue( "BackgroundCheckType", backgroundCheckType.Guid.ToString() );
-                backgroundCheck.SaveAttributeValues( rockContext );
-            }
-
-            if ( backgroundCheckType != null && backgroundCheck.PackageName.IsNullOrWhiteSpace() )
-            {
-                backgroundCheck.PackageName = backgroundCheckType.Value;
-            }
-
-            if ( reportStatus.IsNullOrWhiteSpace() && linkedWorkflow != null )
-            {
-                reportStatus = linkedWorkflow.GetAttributeValue( "ReportStatus" );
-            }
-
-            var stepProgramGuid = MinistrySafeSystemGuid.MINISTRYSAFE_BACKGROUNDCHECK_PROGRAM.AsGuid();
-            var stepProgram = new StepProgramService( rockContext ).Queryable()
-                .FirstOrDefault( sp => sp.Guid == stepProgramGuid );
-            if ( stepProgram == null )
-            {
-                return null;
-            }
-
-            var stepTypeName = backgroundCheckType?.Value;
-            if ( stepTypeName.IsNullOrWhiteSpace() )
-            {
-                stepTypeName = backgroundCheck.PackageName.IsNullOrWhiteSpace()
-                    ? "Background Check"
-                    : backgroundCheck.PackageName.Trim();
-            }
-            var stepTypeService = new StepTypeService( rockContext );
-            var stepType = stepTypeService.Queryable()
-                .FirstOrDefault( st => st.StepProgramId == stepProgram.Id && st.Name == stepTypeName );
-            if ( stepType == null )
-            {
-                stepType = new StepType
-                {
-                    IsActive = true,
-                    StepProgramId = stepProgram.Id,
-                    ForeignId = 4,
-                    Name = stepTypeName
-                };
-                stepTypeService.Add( stepType );
-                rockContext.SaveChanges();
-            }
-
-            var backgroundCheckEntityTypeId = EntityTypeCache.Get( typeof( BackgroundCheck ) )?.Id;
-            if ( backgroundCheckEntityTypeId == null )
-            {
-                return null;
-            }
-
-            var stepService = new StepService( rockContext );
-            var step = stepService.Queryable()
-                .FirstOrDefault( s => s.RelatedEntityTypeId == backgroundCheckEntityTypeId && s.RelatedEntityId == backgroundCheck.Id );
-            if ( step == null )
-            {
-                step = new Step();
-                stepService.Add( step );
-            }
-
-            var ministrySafeStatusType = DefinedTypeCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_BACKGROUNDCHECK_STATUS_TYPE.AsGuid() );
-            var ministrySafeStatusDefinedValue = ministrySafeStatusGuid.HasValue
-                ? DefinedValueCache.Get( ministrySafeStatusGuid.Value )
-                : null;
-            var fallbackStatusName = GetBackgroundCheckStepStatusName( backgroundCheck, reportStatus );
-            var workflowStatusName = ministrySafeStatusDefinedValue?.Value;
-            var hasBackgroundCheckResult = !reportStatus.IsNullOrWhiteSpace() ||
-                BackgroundCheckStatuses.COMPLETED_CLEARED.Contains( backgroundCheck.Status ) ||
-                BackgroundCheckStatuses.COMPLETED_NEEDS_REVIEW.Contains( backgroundCheck.Status ) ||
-                BackgroundCheckStatuses.CANCELLED.Contains( backgroundCheck.Status );
-            var workflowStatusIsInitial = string.Equals( workflowStatusName, "Pending", StringComparison.OrdinalIgnoreCase ) ||
-                string.Equals( workflowStatusName, "Awaiting Applicant", StringComparison.OrdinalIgnoreCase ) ||
-                string.Equals( workflowStatusName, "Awaiting MinistrySafe Review", StringComparison.OrdinalIgnoreCase );
-            var hasDefinitiveReportStatus = string.Equals( reportStatus, "Pass", StringComparison.OrdinalIgnoreCase ) ||
-                string.Equals( reportStatus, "Fail", StringComparison.OrdinalIgnoreCase ) ||
-                string.Equals( reportStatus, "Cancelled", StringComparison.OrdinalIgnoreCase );
-
-            var stepStatusName = workflowStatusName;
-            if ( ministrySafeStatusDefinedValue == null ||
-                hasDefinitiveReportStatus ||
-                hasBackgroundCheckResult && workflowStatusIsInitial )
-            {
-                ministrySafeStatusDefinedValue = ministrySafeStatusType?
-                    .DefinedValues
-                    .FirstOrDefault( dv => dv.Value == fallbackStatusName );
-                stepStatusName = ministrySafeStatusDefinedValue?.Value;
-            }
-            stepStatusName = stepStatusName ?? "Pending";
-
-            var stepStatus = new StepStatusService( rockContext ).Queryable()
-                .FirstOrDefault( ss => ss.StepProgramId == stepProgram.Id && ss.Name == stepStatusName );
-
-            step.StepTypeId = stepType.Id;
-            step.PersonAliasId = backgroundCheck.PersonAliasId;
-            step.StepStatusId = stepStatus?.Id;
-            step.StartDateTime = backgroundCheck.RequestDate;
-            var hasResponse = !reportStatus.IsNullOrWhiteSpace() ||
-                BackgroundCheckStatuses.COMPLETED_CLEARED.Contains( backgroundCheck.Status ) ||
-                BackgroundCheckStatuses.COMPLETED_NEEDS_REVIEW.Contains( backgroundCheck.Status ) ||
-                BackgroundCheckStatuses.CANCELLED.Contains( backgroundCheck.Status );
-            step.CompletedDateTime = hasResponse ? backgroundCheck.ResponseDate : null;
-            step.EndDateTime = hasResponse ? backgroundCheck.ResponseDate : null;
-            step.RelatedEntityTypeId = backgroundCheckEntityTypeId;
-            step.RelatedEntityId = backgroundCheck.Id;
-            rockContext.SaveChanges();
-
-            if ( linkedWorkflow != null )
-            {
-                if ( linkedWorkflow.Attributes.ContainsKey( "Step" ) )
-                {
-                    linkedWorkflow.SetAttributeValue( "Step", step.Guid.ToString() );
-                    linkedWorkflow.SaveAttributeValues( rockContext );
-                }
-            }
-
-            return step;
-        }
-
-        private static string GetBackgroundCheckStepStatusName( BackgroundCheck backgroundCheck, string reportStatus )
-        {
-            if ( string.Equals( reportStatus, "Pass", StringComparison.OrdinalIgnoreCase ) )
-            {
-                return "Approved";
-            }
-
-            if ( string.Equals( reportStatus, "Fail", StringComparison.OrdinalIgnoreCase ) )
-            {
-                return "Failed Pending Review";
-            }
-
-            if ( string.Equals( reportStatus, "Cancelled", StringComparison.OrdinalIgnoreCase ) )
-            {
-                if ( string.Equals( backgroundCheck.Status, "applicant_withdrawn", StringComparison.OrdinalIgnoreCase ) )
-                {
-                    return "Applicant Withdrawn";
-                }
-
-                if ( string.Equals( backgroundCheck.Status, "archived", StringComparison.OrdinalIgnoreCase ) )
-                {
-                    return "Archived";
-                }
-
-                return "Cancelled";
-            }
-
-            if ( BackgroundCheckStatuses.COMPLETED_CLEARED.Contains( backgroundCheck.Status ) )
-            {
-                return "Approved";
-            }
-
-            if ( string.Equals( backgroundCheck.Status, "applicant_withdrawn", StringComparison.OrdinalIgnoreCase ) )
-            {
-                return "Applicant Withdrawn";
-            }
-
-            if ( string.Equals( backgroundCheck.Status, "archived", StringComparison.OrdinalIgnoreCase ) )
-            {
-                return "Archived";
-            }
-
-            if ( BackgroundCheckStatuses.CANCELLED.Contains( backgroundCheck.Status ) )
-            {
-                return "Cancelled";
-            }
-
-            if ( string.Equals( backgroundCheck.Status, "pre_adverse", StringComparison.OrdinalIgnoreCase ) )
-            {
-                return "Pre-Adverse";
-            }
-
-            if ( BackgroundCheckStatuses.AWAITING_APPLICANT.Contains( backgroundCheck.Status ) )
-            {
-                return "Awaiting Applicant";
-            }
-
-            if ( BackgroundCheckStatuses.SUBMITTED.Contains( backgroundCheck.Status ) ||
-                BackgroundCheckStatuses.PROCESSING.Contains( backgroundCheck.Status ) )
-            {
-                return "Awaiting MinistrySafe Review";
-            }
-
-            if ( backgroundCheck.Status.IsNotNullOrWhiteSpace() &&
-                ( backgroundCheck.Status.StartsWith( "adverse", StringComparison.OrdinalIgnoreCase ) ||
-                  string.Equals( backgroundCheck.Status, "rejected", StringComparison.OrdinalIgnoreCase ) ||
-                  string.Equals( reportStatus, "Fail", StringComparison.OrdinalIgnoreCase ) ) )
-            {
-                return "Failed Pending Review";
-            }
-
-            if ( BackgroundCheckStatuses.COMPLETED_NEEDS_REVIEW.Contains( backgroundCheck.Status ) ||
-                string.Equals( reportStatus, "Review", StringComparison.OrdinalIgnoreCase ) )
-            {
-                return "Awaiting Security Review";
-            }
-
-            return "Pending";
-        }
-
         private static bool UpdateBackgroundCheck( string requestId, string externalId, string resultsUrl, int? userId, int? level, string customPackageCode, string status, DateTime? completionDate, DateTime? orderDate, bool? tazworkFlagged = null, WorkflowTypeCache workflowTypeCache = null, bool relaunchCompletedWorkflows = false, int? interactionId = null )
         {
             try
@@ -1077,7 +787,6 @@ namespace com.bemaservices.MinistrySafe
                         UpdateBackgroundCheckWorkflow( backgroundCheck.WorkflowId.Value, recommendation, backgroundCheck.ResponseId, reportStatus, rockContext, backgroundCheck.PersonAliasId, resultsUrl, interactionId );//, customPackageCode, level, userType );
                     }
 
-                    SynchronizeBackgroundCheckStep( rockContext, backgroundCheck, reportStatus, customPackageCode, level );
                     LogMessageToDebuggingInteraction( interactionId, "Background Check Update Complete." );
                 }
 
@@ -1148,86 +857,202 @@ namespace com.bemaservices.MinistrySafe
         /// <returns>True/False value of whether the request was successfully sent or not.</returns>
         public static bool UpdatePackages( List<string> errorMessages )
         {
-            List<PackageResponse> customPackageResponseList;
+            List<PackageResponse> packageList = new List<PackageResponse>();
 
-            if ( !MinistrySafeApiUtility.GetPackages( out customPackageResponseList, errorMessages ) )
+            // First, add any custom packages
+            List<PackageResponse> customPackageApiResponseList;
+            if ( MinistrySafeApiUtility.GetPackages( out customPackageApiResponseList, errorMessages ) )
             {
-                //return false;
+                if ( customPackageApiResponseList != null && customPackageApiResponseList.Any() )
+                {
+                    packageList.AddRange( customPackageApiResponseList );
+                }
             }
 
-            if ( customPackageResponseList == null )
-            {
-                customPackageResponseList = new List<PackageResponse>();
-            }
+            // Next, get available standard levels
 
-            var defaultPackageResponseList = new List<PackageResponse>();
-            var packageResponseList = new List<PackageResponse>();
+            var userTypes = DefinedTypeCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_USER_TYPES.AsGuid() )
+                .DefinedValues
+                .ToList();
 
             List<int> availableLevels;
-            if ( !MinistrySafeApiUtility.GetAvailableLevels( out availableLevels, errorMessages ) )
+            if ( MinistrySafeApiUtility.GetAvailableLevels( out availableLevels, errorMessages ) )
             {
-                availableLevels = new List<int>();
-            }
-
-            foreach ( var level in availableLevels )
-            {
-                var packageResponse = new PackageResponse();
-                packageResponse.Name = String.Format( "Search Level {0}", level.ToWords().ToUpper() );
-                packageResponse.Level = level;
-                defaultPackageResponseList.Add( packageResponse );
-            }
-
-            Dictionary<string, List<DefinedValue>> groupedPackageKeys;
-            using ( var rockContext = new RockContext() )
-            {
-                var definedType = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.BACKGROUND_CHECK_TYPES.AsGuid() );
-
-                DefinedValueService definedValueService = new DefinedValueService( rockContext );
-                groupedPackageKeys = definedValueService
-                    .GetByDefinedTypeGuid( Rock.SystemGuid.DefinedType.BACKGROUND_CHECK_TYPES.AsGuid() )
-                    .Where( v => v.ForeignId == 4 )
-                    .ToList()
-                    .Select( v => { v.LoadAttributes( rockContext ); return v; } ) // v => v.Value.Substring( MinistrySafeConstants.TYPENAME_PREFIX.Length ) )
-                    .GroupBy( v => v.GetAttributeValue( "MinistrySafePackageName" ).ToString() )
-                    .ToDictionary( v => v.Key, v => v.ToList() );
-
-                var userTypes = definedValueService
-                     .GetByDefinedTypeGuid( "559E79C6-2EAB-4A0D-A16F-59D9B63F002F".AsGuid() )
-                     .ToList();
-
-                foreach ( var packageResponse in customPackageResponseList )
+                if ( availableLevels != null && availableLevels.Any() )
                 {
-                    string packageName = packageResponse.Name;
-                    if ( !groupedPackageKeys.ContainsKey( packageName ) )
-                    {
-                        AddPackage( rockContext, definedType, definedValueService, packageResponse, null );
-                    }
-
-                    packageResponseList.Add( packageResponse );
-                }
-
-                foreach ( var packageResponse in defaultPackageResponseList )
-                {
-                    string packageName = packageResponse.Name;
-                    if ( !groupedPackageKeys.ContainsKey( packageName ) )
+                    foreach ( var level in availableLevels )
                     {
                         foreach ( var userType in userTypes )
                         {
-                            AddPackage( rockContext, definedType, definedValueService, packageResponse, userType );
+                            var packageResponse = new PackageResponse();
+                            packageResponse.Name = String.Format( "Search Level {0}", level.ToWords().ToUpper() );
+                            packageResponse.Level = level;
+                            packageResponse.UserTypeDescription = userType.Description;
+                            packageResponse.UserTypeGuid = userType.Guid;
+                            packageResponse.UserTypeCode = userType.Value.ToLower().Trim();
+                            packageList.Add( packageResponse );
                         }
                     }
+                }
+            }
 
-                    packageResponseList.Add( packageResponse );
+            using ( var rockContext = new RockContext() )
+            {
+                // Update Step Types
+                var stepTypeMapping = new Dictionary<string, Guid>();
+                var stepProgram = StepProgramCache.Get( MinistrySafeSystemGuid.MINISTRYSAFE_BACKGROUNDCHECK_PROGRAM.AsGuid() );
+
+                if ( stepProgram == null )
+                {
+                    errorMessages.Add( "MinistrySafe Training Step Program not found. Please ensure the MinistrySafe migrations have run." );
+                    return false;
                 }
 
-                var packageRestResponseNames = packageResponseList.Select( pr => pr.Name );
-                foreach ( var groupedPackageKey in groupedPackageKeys )
+                var stepTypeService = new StepTypeService( rockContext );
+                var stepProgramGuid = stepProgram.Guid;
+                var stepTypeList = stepTypeService.Queryable().Where( st => st.StepProgram.Guid == stepProgramGuid ).ToList();
+
+                // First, mark all existing codes as inactive
+                foreach ( var stepType in stepTypeList )
                 {
-                    var isPackageActive = packageRestResponseNames.Contains( groupedPackageKey.Key );
-                    foreach ( var package in groupedPackageKey.Value )
+                    stepType.IsActive = false;
+                }
+
+                foreach ( var backgroundCheckPackage in packageList )
+                {
+                    var packageNameFormatted = string.Format( "{0}{1} {2}",
+                        MinistrySafeConstants.MINISTRYSAFE_TYPENAME_PREFIX,
+                        backgroundCheckPackage.UserTypeDescription.IsNotNullOrWhiteSpace() ? backgroundCheckPackage.UserTypeDescription : "",
+                        backgroundCheckPackage.Name.Replace( '_', ' ' ) );
+
+                    var stepType = stepTypeList
+                        .Where( st => st.ForeignKey == backgroundCheckPackage.ForeignKey )
+                        .FirstOrDefault();
+                    if ( stepType == null )
                     {
-                        package.IsActive = isPackageActive;
+                        stepType = new StepType()
+                        {
+                            IsActive = true,
+                            StepProgramId = stepProgram.Id,
+                            ForeignId = 4,
+                            ForeignKey = backgroundCheckPackage.ForeignKey,
+                            Name = packageNameFormatted
+                        };
+
+                        stepTypeService.Add( stepType );
+                        rockContext.SaveChanges();
                     }
+
+                    stepType.IsActive = true;
+                    stepType.Name = packageNameFormatted;
+                    stepType.ForeignId = 4;
+                    stepType.ForeignKey = backgroundCheckPackage.ForeignKey;
+
+
+                    stepType.LoadAttributes( rockContext );
+                    stepType.SetAttributeValue( "Name", backgroundCheckPackage.Name );
+                    stepType.SetAttributeValue( "Level", backgroundCheckPackage.Level );
+                    stepType.SetAttributeValue( "Code", backgroundCheckPackage.Code );
+                    stepType.SetAttributeValue( "Price", backgroundCheckPackage.Price );
+                    stepType.SetAttributeValue( "UserType", backgroundCheckPackage.UserTypeGuid.ToStringSafe() );
+
+                    stepType.SaveAttributeValues( rockContext );
+
+                    // Add Score attribute to steps of this step type if it doesn't exist
+                    var stepEntityTypeId = EntityTypeCache.Get( typeof( Step ) ).Id;
+                    var attributeService = new AttributeService( rockContext );
+                    var scoreAttribute = attributeService
+                        .GetByEntityTypeQualifier( stepEntityTypeId, "StepTypeId", stepType.Id.ToString(), true )
+                        .FirstOrDefault( a => a.Key == "Score" );
+
+                    //if ( scoreAttribute == null )
+                    //{
+                    //    scoreAttribute = new Rock.Model.Attribute
+                    //    {
+                    //        EntityTypeId = stepEntityTypeId,
+                    //        EntityTypeQualifierColumn = "StepTypeId",
+                    //        EntityTypeQualifierValue = stepType.Id.ToString(),
+                    //        Key = "Score",
+                    //        Name = "Score",
+                    //        FieldTypeId = FieldTypeCache.Get( Rock.SystemGuid.FieldType.INTEGER.AsGuid() ).Id,
+                    //        IsRequired = false,
+                    //        Order = 0
+                    //    };
+                    //    attributeService.Add( scoreAttribute );
+                    //    rockContext.SaveChanges();
+                    //}
+
+                    stepTypeMapping.Add( backgroundCheckPackage.ForeignKey, stepType.Guid );
+                }
+
+
+                // Update Defined Values
+                var definedType = DefinedTypeCache.Get( Rock.SystemGuid.DefinedType.BACKGROUND_CHECK_TYPES.AsGuid() );
+
+                DefinedValueService definedValueService = new DefinedValueService( rockContext );
+                var definedValueList = definedValueService
+                    .GetByDefinedTypeGuid( Rock.SystemGuid.DefinedType.BACKGROUND_CHECK_TYPES.AsGuid() )
+                    .Where( v => v.ForeignId == 4 )
+                    .ToList()
+                    .Select( v => { v.LoadAttributes( rockContext ); return v; } )
+                    .ToList();
+
+                // First, mark all existing codes as inactive
+                foreach ( var definedValue in definedValueList )
+                {
+                    definedValue.IsActive = false;
+                }
+
+                foreach ( var backgroundCheckPackage in packageList )
+                {
+                    var packageNameFormatted = string.Format( "{0}{1} {2}",
+                        MinistrySafeConstants.MINISTRYSAFE_TYPENAME_PREFIX,
+                        backgroundCheckPackage.UserTypeDescription.IsNotNullOrWhiteSpace() ? backgroundCheckPackage.UserTypeDescription : "",
+                        backgroundCheckPackage.Name.Replace( '_', ' ' ) );
+
+                    var definedValue = definedValueList
+                        .Where( dv => dv.ForeignKey == backgroundCheckPackage.ForeignKey )
+                        .FirstOrDefault();
+
+                    if ( definedValue == null )
+                    {
+                        definedValue = definedValueList
+                            .Where( dv =>
+                                dv.GetAttributeValue( "MinistrySafePackageName" ).ToStringSafe() == backgroundCheckPackage.Name &&
+                                dv.GetAttributeValue( "MinistrySafeUserType" ).ToStringSafe() == backgroundCheckPackage.UserTypeGuid.ToStringSafe() )
+                            .FirstOrDefault();
+                    }
+
+                    if ( definedValue == null )
+                    {
+                        definedValue = new DefinedValue()
+                        {
+                            IsActive = true,
+                            DefinedTypeId = definedType.Id,
+                            ForeignId = 4,
+                            Value = packageNameFormatted
+                        };
+
+                        definedValueService.Add( definedValue );
+                        rockContext.SaveChanges();
+                    }
+
+                    definedValue.LoadAttributes( rockContext );
+
+                    definedValue.SetAttributeValue( "MinistrySafePackageName", backgroundCheckPackage.Name );
+                    definedValue.SetAttributeValue( "MinistrySafePackageLevel", backgroundCheckPackage.Level );
+                    definedValue.SetAttributeValue( "MinistrySafePackageCode", backgroundCheckPackage.Code );
+                    definedValue.SetAttributeValue( "MinistrySafePackagePrice", backgroundCheckPackage.Price );
+                    definedValue.SetAttributeValue( "MinistrySafeUserType", backgroundCheckPackage.UserTypeGuid.ToStringSafe() );
+
+
+                    //var stepTypeGuid = stepTypeMapping.GetValueOrNull( surveyCodeResponse.Code );
+                    //if ( stepTypeGuid.HasValue )
+                    //{
+                    //    definedValue.SetAttributeValue( "StepType", stepTypeGuid.ToString() );
+                    //}
+
+                    definedValue.SaveAttributeValues( rockContext );
                 }
 
                 rockContext.SaveChanges();

@@ -14,7 +14,10 @@
 // limitations under the License.
 // </copyright>
 //
+using System;
+using System.Data.Entity.ModelConfiguration.Configuration;
 using Newtonsoft.Json;
+using Rock;
 
 namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 {
@@ -56,5 +59,21 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// </summary>
         /// <value>The level.</value>
         public int? Level { get; set; }
+
+        public string UserTypeDescription { get; set; }
+        public Guid? UserTypeGuid { get; set; }
+        public string UserTypeCode { get; set; }
+
+        public virtual string ForeignKey
+        {
+            get
+            {
+                return string.Format( "{0}|{1}|{2}",
+                    Level.IsNotNullOrZero() ? Level.ToString() : string.Empty,
+                    UserTypeCode.IsNotNullOrWhiteSpace() ? UserTypeCode : string.Empty,
+                    Code.IsNotNullOrWhiteSpace() ? Code : string.Empty
+                    );
+            }
+        } 
     }
 }

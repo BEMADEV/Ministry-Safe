@@ -114,19 +114,10 @@ namespace com.bemaservices.MinistrySafe.Constants
 
         public static readonly string MINISTRYSAFE_MIGRATE_BACKGROUNDCHECKS_JOB = "60CCBE32-86CE-4DCD-9B3D-A4501FE73014";
 
-        /// <summary>
-        /// The checkr requestlist block
-        /// </summary>
         public static readonly string MINISTRYSAFE_USER_TYPES = "559E79C6-2EAB-4A0D-A16F-59D9B63F002F";
 
-        /// <summary>
-        /// The ministrysafe tags
-        /// </summary>
         public static readonly string MINISTRYSAFE_TAGS = "D8AB082B-A19A-475F-B7F6-BE17F4B289E9";
 
-        /// <summary>
-        /// The checkr requestlist workflowdetailpage attribute
-        /// </summary>
         public static readonly string MINISTRYSAFE_REQUESTLIST_WORKFLOWDETAILPAGE_ATTRIBUTE = "BE22FA30-4B6C-499B-BE9E-A295C3649DEB";
     }
 }
