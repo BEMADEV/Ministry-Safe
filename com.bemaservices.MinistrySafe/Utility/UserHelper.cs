@@ -152,6 +152,7 @@ namespace com.bemaservices.MinistrySafe.Utility
 
             return userType;
         }
+
         /// <summary>
         /// Gets the child serving.
         /// </summary>
@@ -424,7 +425,6 @@ namespace com.bemaservices.MinistrySafe.Utility
             }
         }
 
-
         /// <summary>
         /// Gets the tags.
         /// </summary>
@@ -449,6 +449,7 @@ namespace com.bemaservices.MinistrySafe.Utility
 
             return true;
         }
+
         /// <summary>
         /// Updates the tags.
         /// </summary>
@@ -456,17 +457,28 @@ namespace com.bemaservices.MinistrySafe.Utility
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public static bool UpdateTags( List<string> errorMessages )
         {
-            List<TagV2> tagResponseList;
+            // This was the old V2 API call that was used to update the tags on an existing user.
+            // It is no longer supported in V3, so we comment it out.
+            //List<TagV2> tagResponseList;
 
-            if ( !ApiHelper.GetTags( out tagResponseList, errorMessages ) )
+            //if ( !ApiHelper.GetTags( out tagResponseList, errorMessages ) )
+            //{
+            //    //return false;
+            //}
+
+            //if ( tagResponseList == null )
+            //{
+            //    tagResponseList = new List<TagV2>();
+            //}
+
+            // Instead, we pull all users and get distinct tags from them, then update the defined values in Rock to match.
+            List<UserV3> userList = new List<UserV3>();
+            if ( !ApiHelper.GetUsers( 1, string.Empty, out userList, errorMessages ) )
             {
-                //return false;
+                return false;
             }
 
-            if ( tagResponseList == null )
-            {
-                tagResponseList = new List<TagV2>();
-            }
+            var tagList = userList.SelectMany( u => u.Tags ).Distinct().ToList();
 
             List<DefinedValue> tags;
             using ( var rockContext = new RockContext() )
@@ -480,12 +492,10 @@ namespace com.bemaservices.MinistrySafe.Utility
                     .ToList();
                 var tagNames = tags.Select( dv => dv.Value ).ToList();
 
-                foreach ( var tagResponse in tagResponseList )
+                foreach ( var tagName in tagList )
                 {
-                    string tagName = tagResponse.Name;
                     if ( !tagNames.Contains( tagName ) )
                     {
-
                         DefinedValue definedValue = null;
 
                         definedValue = new DefinedValue()
@@ -502,10 +512,9 @@ namespace com.bemaservices.MinistrySafe.Utility
                     }
                 }
 
-                var packageRestResponseNames = tagResponseList.Select( pr => pr.Name );
                 foreach ( var tag in tags )
                 {
-                    tag.IsActive = packageRestResponseNames.Contains( tag.Value );
+                    tag.IsActive = tagList.Contains( tag.Value );
                 }
 
                 rockContext.SaveChanges();
