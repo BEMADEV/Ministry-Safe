@@ -1,0 +1,97 @@
+﻿// <copyright>
+// Copyright by BEMA Software Services
+//
+// Licensed under the Rock Community License (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.rockrms.com/license
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+//
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using com.bemaservices.MinistrySafe.Constants;
+using Rock;
+using Rock.Model;
+using Rock.Plugin;
+
+namespace com.bemaservices.MinistrySafe.Migrations
+{
+    /// <summary>
+    /// Class RequestLauncher.
+    /// Implements the <see cref="Migration" />
+    /// </summary>
+    /// <seealso cref="Migration" />
+    [MigrationNumber( 18, "1.16.0" )]
+    public partial class Hotfixes : Migration
+    {
+        /// <summary>
+        /// The commands to run to migrate plugin to the specific version
+        /// </summary>
+        public override void Up()
+        {
+            RockMigrationHelper.AddActionTypeAttributeValue( "7602EB3D-C02E-4D4B-8D1C-EBB843DF3BF2", "3DF1CCE7-5A18-4DC5-9DD5-6F34CEAB40B6", @"{{ 'Now' | Date:'yyyy-MM-ddTHH:mm:ss' }}" ); // Awareness Training (MinistrySafe):Submit Request:Add Step:Start Date|Attribute Value
+            RockMigrationHelper.AddActionTypeAttributeValue( "07BB3139-EFF7-432A-9AFD-D060C19F81A5", "94689BDE-493E-4869-A614-2D54822D747C", @"{{ 'Now' | Date:'yyyy-MM-ddTHH:mm:ss' }}" ); // Awareness Training (MinistrySafe):Submit Request:Set Training Request Date:Value|Attribute Value
+            RockMigrationHelper.AddActionTypeAttributeValue( "44B246E6-5EA9-4562-B4A5-6EC14340C350", "3DF1CCE7-5A18-4DC5-9DD5-6F34CEAB40B6", @"{{ 'Now' | Date:'yyyy-MM-ddTHH:mm:ss' }}" ); // Awareness Training (MinistrySafe):Process Result:Add Step if Does Not Exist:Start Date|Attribute Value
+            RockMigrationHelper.AddActionTypeAttributeValue( "15C6C2E1-99F0-4A40-91E4-F2175FF9A7B9", "0415C959-BF89-4D19-9C47-3AB1098E1FBA", @"{{ 'Now' | Date:'yyyy-MM-ddTHH:mm:ss' }}" ); // Awareness Training (MinistrySafe):Process Result:Complete Step:Property Value|Property Value Attribute
+            RockMigrationHelper.AddActionTypeAttributeValue( "2C33553C-CF30-47A2-B1AF-21C73DDBA83E", "94689BDE-493E-4869-A614-2D54822D747C", @"{{ 'Now' | Date:'yyyy-MM-ddTHH:mm:ss' }}" ); // Awareness Training (MinistrySafe):Send Reminder and Close Workflow:Set Training Request Date:Value|Attribute Value
+
+            Sql( @"
+        DECLARE @ActionTypeGuids TABLE (Guid uniqueidentifier);
+        INSERT INTO @ActionTypeGuids (Guid)
+        VALUES
+            ('81D800B4-1E84-4C4A-A3C6-71EE0A84F27A'),
+            ('9EEC1893-684E-455A-8692-E19C1CF7A4F8'),
+            ('DE5565A0-4DE5-4C71-98A5-8605B807388B'),
+            ('15CEB2DC-460D-46F7-A4E3-87AA42627721'),
+            ('767B03F0-D3C4-448D-AB8A-EFF907EF770C');
+
+        DECLARE @ActivityTypeGuid uniqueidentifier =
+            '11095333-04F2-4594-9681-403AA98EA48E';
+
+        DELETE wa
+        FROM dbo.WorkflowAction wa
+        LEFT JOIN dbo.WorkflowActivity activity
+            ON activity.Id = wa.ActivityId
+        LEFT JOIN dbo.WorkflowActivityType activityType
+            ON activityType.Id = activity.ActivityTypeId
+        LEFT JOIN dbo.WorkflowActionType actionType
+            ON actionType.Id = wa.ActionTypeId
+        WHERE actionType.Guid IN (SELECT Guid FROM @ActionTypeGuids)
+           OR activityType.Guid = @ActivityTypeGuid;
+
+        DELETE activity
+        FROM dbo.WorkflowActivity activity
+        INNER JOIN dbo.WorkflowActivityType activityType
+            ON activityType.Id = activity.ActivityTypeId
+        WHERE activityType.Guid = @ActivityTypeGuid;
+                " );
+
+            RockMigrationHelper.DeleteWorkflowActionType( "81D800B4-1E84-4C4A-A3C6-71EE0A84F27A" ); // Background Check (MinistrySafe):Submit Request:Launch Expiration Handling
+            RockMigrationHelper.DeleteWorkflowActionType( "9EEC1893-684E-455A-8692-E19C1CF7A4F8" ); // Background Check (MinistrySafe):Handle Expired Result:Delay 1 Week
+            RockMigrationHelper.DeleteWorkflowActionType( "DE5565A0-4DE5-4C71-98A5-8605B807388B" ); // Background Check (MinistrySafe):Handle Expired Result:Complete Activity if Background Check has been completed
+            RockMigrationHelper.DeleteWorkflowActionType( "15CEB2DC-460D-46F7-A4E3-87AA42627721" ); // Background Check (MinistrySafe):Handle Expired Result:Notify Requester
+            RockMigrationHelper.DeleteWorkflowActionType( "767B03F0-D3C4-448D-AB8A-EFF907EF770C" ); // Background Check (MinistrySafe):Handle Expired Result:Complete Workflow
+
+            RockMigrationHelper.DeleteWorkflowActivityType( "11095333-04F2-4594-9681-403AA98EA48E" ); // Background Check (MinistrySafe):Handle Expired Result
+        }
+
+
+
+        /// <summary>
+        /// The commands to undo a migration from a specific version
+        /// </summary>
+        public override void Down()
+        {
+        }
+    }
+}

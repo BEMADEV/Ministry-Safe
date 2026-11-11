@@ -92,11 +92,69 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         {
             using ( var rockContext = new RockContext() )
             {
+                // V3
                 var settings = SharedHelper.GetSettings( rockContext );
                 SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, tbAccessToken.Text, true );
                 SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, tbServerUrl.Text, false );
                 SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, cbEnableDebugging.Checked.ToString(), false );
 
+                // V2
+                var settings = com.bemaservices.MinistrySafe.MinistrySafe.GetSettings( rockContext );
+                var webhookUsername = cbClearWebhookCredentials.Checked ? string.Empty : tbWebhookUsername.Text;
+                var webhookPassword = tbWebhookPassword.Text ?? string.Empty;
+                var storedWebhookPassword = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue(
+                    settings,
+                    MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_PASSWORD );
+                var hasWebhookUsername = !string.IsNullOrWhiteSpace( webhookUsername );
+                var willHaveWebhookPassword = !cbClearWebhookCredentials.Checked &&
+                    ( !string.IsNullOrEmpty( webhookPassword ) || !string.IsNullOrEmpty( storedWebhookPassword ) );
+
+                if ( !cbClearWebhookCredentials.Checked &&
+                    !string.IsNullOrEmpty( webhookUsername ) &&
+                    string.IsNullOrWhiteSpace( webhookUsername ) )
+                {
+                    nbNotification.Text = "Webhook authentication username cannot contain only whitespace.";
+                    nbNotification.Visible = true;
+                    return;
+                }
+
+                if ( !cbClearWebhookCredentials.Checked && webhookUsername.Contains( ":" ) )
+                {
+                    nbNotification.Text = "Webhook authentication username cannot contain a colon.";
+                    nbNotification.Visible = true;
+                    return;
+                }
+
+                if ( !cbClearWebhookCredentials.Checked && hasWebhookUsername != willHaveWebhookPassword )
+                {
+                    nbNotification.Text = "Webhook authentication requires both a username and a password. Enter both credentials or clear the saved credentials.";
+                    nbNotification.Visible = true;
+                    return;
+                }
+
+                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, tbAccessToken.Text, true );
+                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, tbServerUrl.Text, false );
+                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, cbEnableDebugging.Checked.ToString(), false );
+                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue(
+                    rockContext,
+                    settings,
+                    MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_USERNAME,
+                    webhookUsername,
+                    false );
+
+                var passwordValueToSave = cbClearWebhookCredentials.Checked
+                    ? string.Empty
+                    : !string.IsNullOrEmpty( webhookPassword )
+                        ? Encryption.EncryptString( webhookPassword )
+                        : storedWebhookPassword;
+                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue(
+                    rockContext,
+                    settings,
+                    MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_PASSWORD,
+                    passwordValueToSave,
+                    false );
+
+ // End V2
                 rockContext.SaveChanges();
 
                 BackgroundCheckContainer.Instance.Refresh();
@@ -295,7 +353,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                     .ToList();
 
                     lPackages.Text = packages.AsDelimited( "<br/>" );
-                }                
+                }
             }
         }
 
@@ -329,7 +387,7 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                     .ToList();
 
                     lSurveyTypes.Text = surveyTypes.AsDelimited( "<br/>" );
-                }                               
+                }
             }
         }
 
@@ -353,6 +411,8 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         {
             string accessToken = null;
             string serverUrl = null;
+            string webhookUsername = null;
+            bool webhookPasswordConfigured = false;
             bool enableDebugging = false;
             using ( RockContext rockContext = new RockContext() )
             {
@@ -362,6 +422,9 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                     accessToken = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, true );
                     serverUrl = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, false );
                     enableDebugging = SharedHelper.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, false ).AsBoolean();
+                    webhookUsername = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_USERNAME );
+                    webhookPasswordConfigured = !string.IsNullOrEmpty(
+                        com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue( settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_PASSWORD ) );
 
                     if ( accessToken.IsNullOrWhiteSpace() )
                     {
@@ -385,6 +448,9 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
             tbAccessToken.Text = accessToken;
             tbServerUrl.Text = serverUrl;
             cbEnableDebugging.Checked = enableDebugging;
+            tbWebhookUsername.Text = webhookUsername;
+            tbWebhookPassword.Text = string.Empty;
+            cbClearWebhookCredentials.Checked = false;
 
             if ( accessToken.IsNullOrWhiteSpace() || serverUrl.IsNullOrWhiteSpace() )
             {
@@ -409,6 +475,8 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                     .Add( "Access Token", accessToken )
                     .Add( "Server Url", serverUrl )
                     .Add( "Enable Debugging?", enableDebugging )
+                    .Add( "Webhook Authentication Username", webhookUsername )
+                    .Add( "Webhook Authentication Password", webhookPasswordConfigured ? "Configured" : "Not configured" )
                     .Html;
                 DisplayPackages();
                 DisplayTags();
