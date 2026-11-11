@@ -17,30 +17,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.Composition;
-using System.Data.Entity;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text;
 using com.bemaservices.MinistrySafe.Constants;
-using com.bemaservices.MinistrySafe.Migrations;
 using com.bemaservices.MinistrySafe.MinistrySafeApi;
-using com.bemaservices.MinistrySafe.MinistrySafeApi.V2;
-using com.bemaservices.MinistrySafe.MinistrySafeApi.V3;
-using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.BackgroundChecks;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Trainings;
 using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Users;
 using com.bemaservices.MinistrySafe.Model;
-using Humanizer;
-using Newtonsoft.Json;
 using Rock;
-using Rock.Attribute;
+using Rock.Communication;
 using Rock.Data;
-using Rock.IpAddress;
 using Rock.Model;
-using Rock.Security;
 using Rock.Web.Cache;
 
 namespace com.bemaservices.MinistrySafe.Utility
@@ -259,6 +245,13 @@ namespace com.bemaservices.MinistrySafe.Utility
                     if ( !UserHelper.GetPerson( rockContext, workflow, personAttribute, out person, out personAliasId, errorMessages ) )
                     {
                         errorMessages.Add( "Unable to get Person." );
+                        UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
+                        return true;
+                    }
+
+                    if ( !EmailAddressFieldValidator.IsValid( person.Email ) )
+                    {
+                        errorMessages.Add( "Person does not have a valid email address." );
                         UpdateWorkflowTrainingStatus( workflow, rockContext, "FAIL" );
                         return true;
                     }

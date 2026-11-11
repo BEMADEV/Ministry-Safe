@@ -92,17 +92,10 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
         {
             using ( var rockContext = new RockContext() )
             {
-                // V3
                 var settings = SharedHelper.GetSettings( rockContext );
-                SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, tbAccessToken.Text, true );
-                SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, tbServerUrl.Text, false );
-                SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, cbEnableDebugging.Checked.ToString(), false );
-
-                // V2
-                var settings = com.bemaservices.MinistrySafe.MinistrySafe.GetSettings( rockContext );
                 var webhookUsername = cbClearWebhookCredentials.Checked ? string.Empty : tbWebhookUsername.Text;
                 var webhookPassword = tbWebhookPassword.Text ?? string.Empty;
-                var storedWebhookPassword = com.bemaservices.MinistrySafe.MinistrySafe.GetSettingValue(
+                var storedWebhookPassword = SharedHelper.GetSettingValue(
                     settings,
                     MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_PASSWORD );
                 var hasWebhookUsername = !string.IsNullOrWhiteSpace( webhookUsername );
@@ -132,10 +125,10 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                     return;
                 }
 
-                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, tbAccessToken.Text, true );
-                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, tbServerUrl.Text, false );
-                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, cbEnableDebugging.Checked.ToString(), false );
-                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue(
+                SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ACCESS_TOKEN, tbAccessToken.Text, true );
+                SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_SERVER_URL, tbServerUrl.Text, false );
+                SharedHelper.SetSettingValue( rockContext, settings, MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_ENABLE_DEBUGGING, cbEnableDebugging.Checked.ToString(), false );
+                SharedHelper.SetSettingValue(
                     rockContext,
                     settings,
                     MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_USERNAME,
@@ -147,14 +140,12 @@ namespace RockWeb.Plugins.com_bemaservices.MinistrySafe
                     : !string.IsNullOrEmpty( webhookPassword )
                         ? Encryption.EncryptString( webhookPassword )
                         : storedWebhookPassword;
-                com.bemaservices.MinistrySafe.MinistrySafe.SetSettingValue(
+                SharedHelper.SetSettingValue(
                     rockContext,
                     settings,
                     MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_PASSWORD,
                     passwordValueToSave,
                     false );
-
- // End V2
                 rockContext.SaveChanges();
 
                 BackgroundCheckContainer.Instance.Refresh();

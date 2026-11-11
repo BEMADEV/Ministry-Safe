@@ -104,7 +104,7 @@ namespace com.bemaservices.MinistrySafe.Webhooks
         {
             using ( var rockContext = new RockContext() )
             {
-                var settings = MinistrySafe.GetSettings( rockContext );
+                var settings = SharedHelper.GetSettings( rockContext );
                 if ( settings == null )
                 {
                     return WebhookAuthenticationStatus.NotConfigured;

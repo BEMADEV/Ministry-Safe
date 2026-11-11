@@ -75,6 +75,7 @@ namespace com.bemaservices.MinistrySafe.Utility
                 // Find Existing Match
                 if ( user.ExternalId.IsNotNullOrWhiteSpace() )
                 {
+                    externalId = user.ExternalId;
                     var numericExternalId = externalId.RemoveAllNonNumericCharacters().AsIntegerOrNull();
 
                     if ( numericExternalId != null )

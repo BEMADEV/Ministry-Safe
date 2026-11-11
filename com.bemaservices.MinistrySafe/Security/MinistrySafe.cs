@@ -14,33 +14,13 @@
 // limitations under the License.
 // </copyright>
 //
-using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
-using System.Data.Entity;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
 using com.bemaservices.MinistrySafe.Constants;
-using com.bemaservices.MinistrySafe.Migrations;
-using com.bemaservices.MinistrySafe.MinistrySafeApi;
-using com.bemaservices.MinistrySafe.MinistrySafeApi.V2;
-using com.bemaservices.MinistrySafe.MinistrySafeApi.V3;
-using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.BackgroundChecks;
-using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Trainings;
-using com.bemaservices.MinistrySafe.MinistrySafeApi.V3.Users;
-using com.bemaservices.MinistrySafe.Model;
 using com.bemaservices.MinistrySafe.Utility;
-using Humanizer;
-using Newtonsoft.Json;
-using Rock;
 using Rock.Attribute;
 using Rock.Data;
-using Rock.IpAddress;
-using Rock.Model;
 using Rock.Security;
 using Rock.Web.Cache;
 
@@ -72,6 +52,19 @@ namespace com.bemaservices.MinistrySafe
         DefaultBooleanValue = false,
         Order = 2
         )]
+    [TextField( "Webhook Authentication Username",
+        Description = "Optional HTTP Basic Authentication username for incoming MinistrySafe webhooks. Configure together with a password to require authentication.",
+        Key = MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_USERNAME,
+        IsRequired = false,
+        DefaultValue = "",
+        Order = 3 )]
+    [EncryptedTextField( "Webhook Authentication Password",
+        Description = "Optional HTTP Basic Authentication password for incoming MinistrySafe webhooks. Stored encrypted.",
+        Key = MinistrySafeConstants.MINISTRYSAFE_ATTRIBUTE_WEBHOOK_PASSWORD,
+        IsRequired = false,
+        DefaultValue = "",
+        Order = 4,
+        IsPassword = true )]
 
     public class MinistrySafe : BackgroundCheckComponent
     {
