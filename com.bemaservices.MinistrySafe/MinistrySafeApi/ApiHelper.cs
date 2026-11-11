@@ -188,7 +188,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
         /// </summary>
         private static bool HasExpectedStatus(
             IRestResponse restResponse,
-            HttpStatusCode expectedStatusCode,
+            List<HttpStatusCode> expectedStatusCodes,
             string failureMessagePrefix,
             List<string> errorMessages )
         {
@@ -198,7 +198,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
                 return false;
             }
 
-            if ( restResponse.StatusCode != expectedStatusCode )
+            if ( !expectedStatusCodes.Contains(restResponse.StatusCode))
             {
                 errorMessages.Add( failureMessagePrefix + restResponse.Content );
                 return false;
@@ -305,7 +305,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_PACKAGES_URL );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Packages: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to get MinistrySafe Packages: ", errorMessages ) )
             {
                 return false;
             }
@@ -335,7 +335,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}", MinistrySafeConstants.MINISTRYSAFE_BACKGROUNDCHECK_URL, backgroundCheckId ) );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Background Check: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to get MinistrySafe Background Check: ", errorMessages ) )
             {
                 return false;
             }
@@ -362,7 +362,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}/archive", MinistrySafeConstants.MINISTRYSAFE_BACKGROUNDCHECK_URL, backgroundCheckId ), Method.PUT );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to archive MinistrySafe Background Check: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to archive MinistrySafe Background Check: ", errorMessages ) )
             {
                 return false;
             }
@@ -407,7 +407,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Background Checks: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to get MinistrySafe Background Checks: ", errorMessages ) )
             {
                 return false;
             }
@@ -539,7 +539,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( MinistrySafeConstants.MINISTRYSAFE_TRAININGS_URL );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Training Types: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to get MinistrySafe Training Types: ", errorMessages ) )
             {
                 return false;
             }
@@ -592,7 +592,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.Created, "Failed to assign MinistrySafe Training: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.Created }, "Failed to assign MinistrySafe Training: ", errorMessages ) )
             {
                 return false;
             }
@@ -650,7 +650,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Trainings: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to get MinistrySafe Trainings: ", errorMessages ) )
             {
                 return false;
             }
@@ -705,7 +705,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to Resend MinistrySafe Training: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to Resend MinistrySafe Training: ", errorMessages ) )
             {
                 return false;
             }
@@ -735,7 +735,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}", MinistrySafeConstants.MINISTRYSAFE_TRAINING_ATTEMPTS_URL, trainingAttemptId ) );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Training: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to get MinistrySafe Training: ", errorMessages ) )
             {
                 return false;
             }
@@ -768,7 +768,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
             RestRequest restRequest = new RestRequest( String.Format( "{0}/{1}?include=trainings,background_checks", MinistrySafeConstants.MINISTRYSAFE_USERS_URL, userId ) );
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe User: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to get MinistrySafe User: ", errorMessages ) )
             {
                 return false;
             }
@@ -805,7 +805,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to get MinistrySafe Users: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to get MinistrySafe Users: ", errorMessages ) )
             {
                 return false;
             }
@@ -903,7 +903,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.Created, "Failed to create MinistrySafe User: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.Created, HttpStatusCode.OK }, "Failed to create MinistrySafe User: ", errorMessages ) )
             {
                 return false;
             }
@@ -1011,7 +1011,7 @@ namespace com.bemaservices.MinistrySafe.MinistrySafeApi
 
             IRestResponse restResponse = restClient.Execute( restRequest );
 
-            if ( !HasExpectedStatus( restResponse, HttpStatusCode.OK, "Failed to update MinistrySafe User: ", errorMessages ) )
+            if ( !HasExpectedStatus( restResponse, new List<HttpStatusCode> { HttpStatusCode.OK }, "Failed to update MinistrySafe User: ", errorMessages ) )
             {
                 return false;
             }
